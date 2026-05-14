@@ -169,6 +169,42 @@ router.post("/auth/teacher/signin", async (req: Request, res: Response): Promise
   });
 });
 
+router.patch("/auth/password", requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const user = (req as Request & { user: JwtPayload }).user;
+
+  if (user.role !== "student") {
+    res.status(403).json({ error: "Only students can change their password" });
+    return;
+  }
+
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    res.status(400).json({ error: "Current and new passwords are required" });
+    return;
+  }
+  if (newPassword.length < 6) {
+    res.status(400).json({ error: "New password must be at least 6 characters" });
+    return;
+  }
+
+  const [student] = await db.select().from(studentsTable).where(eq(studentsTable.id, user.id!)).limit(1);
+  if (!student) {
+    res.status(404).json({ error: "Student not found" });
+    return;
+  }
+
+  const valid = await bcrypt.compare(currentPassword, student.passwordHash);
+  if (!valid) {
+    res.status(401).json({ error: "Current password is incorrect" });
+    return;
+  }
+
+  const newHash = await bcrypt.hash(newPassword, 12);
+  await db.update(studentsTable).set({ passwordHash: newHash }).where(eq(studentsTable.id, student.id));
+
+  res.json({ message: "Password updated successfully" });
+});
+
 router.get("/auth/me", requireAuth, (req: Request, res: Response): void => {
   const user = (req as Request & { user: JwtPayload }).user;
   res.json({

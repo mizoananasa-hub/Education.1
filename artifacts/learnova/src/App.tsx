@@ -10,6 +10,7 @@ import StudentSignin from "@/pages/student-signin";
 import StudentSignup from "@/pages/student-signup";
 import TeacherSignin from "@/pages/teacher-signin";
 import NotFound from "@/pages/not-found";
+import SettingsPage from "@/pages/settings";
 
 import TeacherFiles from "@/pages/teacher/files";
 import TeacherStudents from "@/pages/teacher/students";
@@ -30,9 +31,9 @@ const queryClient = new QueryClient({
 
 function ProtectedRoute({ component: Component, role, ...rest }: any) {
   const { user, isLoading } = useAuth();
-  
+
   if (isLoading) return null;
-  
+
   if (!user || user.role !== role) {
     return <Redirect to="/" />;
   }
@@ -66,6 +67,9 @@ function Router() {
       <Route path="/teacher/ratings">
         {() => <ProtectedRoute component={TeacherRatings} role="teacher" />}
       </Route>
+      <Route path="/teacher/settings">
+        {() => <ProtectedRoute component={SettingsPage} role="teacher" />}
+      </Route>
 
       {/* Student routes */}
       <Route path="/student">
@@ -73,6 +77,9 @@ function Router() {
       </Route>
       <Route path="/student/reviews">
         {() => <ProtectedRoute component={StudentReviews} role="student" />}
+      </Route>
+      <Route path="/student/settings">
+        {() => <ProtectedRoute component={SettingsPage} role="student" />}
       </Route>
       <Route path="/student/subjects/:subject">
         {() => <ProtectedRoute component={SubjectWorkspace} role="student" />}

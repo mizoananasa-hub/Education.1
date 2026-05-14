@@ -1,6 +1,9 @@
 import { useAuth } from "@/components/auth-provider";
 import { Link, useLocation } from "wouter";
-import { LogOut, Menu, User, BookOpen, Star, FileText, Users, Sparkles, BookText, Layers } from "lucide-react";
+import {
+  LogOut, Menu, User, BookOpen, Star, FileText, Users,
+  Sparkles, BookText, Layers, Settings,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { DialogTitle } from "@/components/ui/dialog";
@@ -23,6 +26,7 @@ export function Layout({ children, role }: LayoutProps) {
     { name: "Files", href: "/teacher/files", icon: FileText },
     { name: "Students", href: "/teacher/students", icon: Users },
     { name: "Ratings", href: "/teacher/ratings", icon: Star },
+    { name: "Settings", href: "/teacher/settings", icon: Settings },
   ];
 
   const subjectMatch = location.match(/^\/student\/subjects\/([^?#]+)/);
@@ -61,11 +65,20 @@ export function Layout({ children, role }: LayoutProps) {
       icon: Layers,
       active: !!currentSubjectPath && window.location.search === "?tab=flashcards",
     },
+    {
+      name: "Settings",
+      href: "/student/settings",
+      icon: Settings,
+      active: location === "/student/settings",
+    },
   ];
 
   const navItems =
     role === "teacher"
-      ? teacherNav.map((item) => ({ ...item, active: location === item.href }))
+      ? teacherNav.map((item) => ({
+          ...item,
+          active: location.startsWith(item.href),
+        }))
       : studentNav;
 
   const SidebarContent = () => (

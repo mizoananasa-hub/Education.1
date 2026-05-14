@@ -1,0 +1,184 @@
+UPDATE the authentication UI, dashboard navigation structure, and settings system.
+
+⚠️ DO NOT rebuild the project.
+⚠️ ONLY update the specified auth fields, sidebar tabs, settings system, and subject dropdown behavior.
+⚠️ KEEP all existing logic and styling improvements.
+
+👨‍🏫 TEACHER LOGIN SUBJECT FIELD (IMPORTANT)
+
+The "Subject" field on the teacher login page MUST be a DROPDOWN SELECT MENU.
+
+❌ NOT a text input.
+
+Use a clean modern select component with:
+
+Hover animation
+Focus glow
+Smooth open/close transition
+Professional styling
+SUBJECT DROPDOWN OPTIONS
+Mathematics
+French
+English
+Arabic
+ICT
+Science
+Social Studies
+Islamic Revision
+Christian Religion
+Biology
+Physics
+Chemistry
+🔐 SUBJECT PASSWORDS (BACKEND ONLY)
+
+Use these EXACT backend-only passwords:
+
+Mathematics → Math@LMS1
+French → French@LMS2
+English → English@LMS3
+Arabic → Arabic@LMS4
+ICT → ICT@LMS5
+Science → Science@LMS6
+Social Studies → Social@LMS7
+Islamic Revision → Islamic@LMS8
+Christian Religion → Christian@LMS9
+Biology → Bio@LMS10
+Physics → Physics@LMS11
+Chemistry → Chem@LMS12
+
+⚠️ IMPORTANT:
+
+NEVER expose passwords in frontend
+NEVER show hints
+NEVER include them in API responses
+Use ONLY for backend validation
+👨‍🏫 TEACHER DASHBOARD SIDEBAR TABS
+
+Teacher sidebar MUST contain ONLY:
+
+Files
+Students
+Ratings
+Settings
+
+Use:
+
+Modern sidebar layout
+Animated active tab indicator
+Hover glow
+Smooth transitions
+Professional icons
+🎒 STUDENT DASHBOARD SIDEBAR TABS
+
+Student sidebar MUST contain ONLY:
+
+Subjects
+Reviews
+Summarizing
+Notes
+Flash Cards
+Settings
+
+Use:
+
+Sliding active indicator
+Smooth hover effects
+Sidebar animations
+Modern card-style navigation feel
+⚙️ SETTINGS PAGE (IMPORTANT)
+
+Add a REAL fully functional Settings page for BOTH students and teachers.
+
+The settings page must NOT be fake or placeholder content.
+
+Use a premium SaaS-style settings layout similar to:
+
+Notion
+Discord
+Linear
+Google Workspace
+
+Use:
+
+Settings sections/cards
+Toggle switches
+Save buttons
+Smooth transitions
+Responsive layout
+Professional spacing
+Elegant typography
+🌙 LIGHT MODE & DARK MODE
+
+Add FULLY FUNCTIONAL theme switching.
+
+Requirements:
+
+Light mode
+Dark mode
+Persistent theme storage
+Save preference in localStorage or database
+Smooth theme transition animation
+Apply theme globally across the app
+
+Use elegant modern colors:
+
+Soft dark backgrounds
+Neutral grays
+Clean whites
+Subtle accent colors
+
+⚠️ DO NOT use childish neon colors.
+
+⚙️ SETTINGS OPTIONS (REAL & FUNCTIONAL)
+👤 Account Settings
+Change full name
+Change password
+Update profile information
+🎨 Appearance Settings
+Toggle Light/Dark mode
+Compact mode toggle
+Sidebar collapse toggle
+🔔 Notification Settings
+
+Functional toggles for:
+
+File upload notifications
+Rating notifications
+AI summary completion notifications
+🔒 Privacy & Security
+Logout all sessions
+JWT session management
+Password update validation
+📚 Learning Preferences (Students)
+Preferred flashcard style
+Auto-save notes toggle
+Default subject landing page
+👨‍🏫 Teacher Preferences
+Default upload subject
+Rating confirmation toggle
+Student table density option
+📚 SUBJECT WORKSPACE TABS
+
+When a student opens a subject, show these tabs inside the subject page:
+
+Files
+Notes
+Summarize
+Flash Cards
+Reviews
+
+Use animated tab transitions and polished UI.
+
+⚠️ FINAL RULES
+DO NOT modify backend architecture
+DO NOT change AI logic
+DO NOT break authentication
+ONLY update:
+Teacher subject dropdown
+Password mapping
+Sidebar structures
+Settings system
+Theme switching
+Subject workspace tabs
+
+Keep the website feeling like a premium modern SaaS learning platform.
