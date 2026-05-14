@@ -1,0 +1,108 @@
+PDATE the authentication UI and dashboard navigation structure.
+
+⚠️ DO NOT rebuild the project.
+⚠️ ONLY update the specified auth fields, sidebar tabs, and subject dropdown behavior.
+⚠️ KEEP all existing logic and styling improvements.
+
+👨‍🏫 TEACHER LOGIN SUBJECT FIELD (IMPORTANT)
+
+The "Subject" field on the teacher login page MUST be a DROPDOWN SELECT MENU.
+
+❌ NOT a text input.
+
+Use a clean modern select component with:
+
+Hover animation
+Focus glow
+Smooth open/close transition
+Professional styling
+SUBJECT DROPDOWN OPTIONS
+Mathematics
+French
+English
+Arabic
+ICT
+Science
+Social Studies
+Islamic Revision
+Christian Religion
+Biology
+Physics
+Chemistry
+🔐 SUBJECT PASSWORDS (BACKEND ONLY)
+
+Use these EXACT backend-only passwords:
+
+Mathematics → Math@LMS1
+French → French@LMS2
+English → English@LMS3
+Arabic → Arabic@LMS4
+ICT → ICT@LMS5
+Science → Science@LMS6
+Social Studies → Social@LMS7
+Islamic Revision → Islamic@LMS8
+Christian Religion → Christian@LMS9
+Biology → Bio@LMS10
+Physics → Physics@LMS11
+Chemistry → Chem@LMS12
+
+⚠️ IMPORTANT:
+
+NEVER expose passwords in frontend
+NEVER show hints
+NEVER include them in API responses
+Use ONLY for backend validation
+👨‍🏫 TEACHER DASHBOARD SIDEBAR TABS
+
+Teacher sidebar MUST contain ONLY:
+
+Files
+Students
+Ratings
+
+Use:
+
+Modern sidebar layout
+Animated active tab indicator
+Hover glow
+Smooth transitions
+Professional icons
+🎒 STUDENT DASHBOARD SIDEBAR TABS
+
+Student sidebar MUST contain ONLY:
+
+Subjects
+Reviews
+Summarizing
+Notes
+Flash Cards
+
+Use:
+
+Sliding active indicator
+Smooth hover effects
+Sidebar animations
+Modern card-style navigation feel
+📚 SUBJECT WORKSPACE TABS
+
+When a student opens a subject, show these tabs inside the subject page:
+
+Files
+Notes
+Summarize
+Flash Cards
+Reviews
+
+Use animated tab transitions and polished UI.
+
+⚠️ FINAL RULES
+DO NOT modify backend architecture
+DO NOT change AI logic
+DO NOT break authentication
+ONLY update:
+Teacher subject dropdown
+Password mapping
+Sidebar structures
+Subject workspace tabs
+
+Keep the website feeling like a premium modern SaaS learning platform.

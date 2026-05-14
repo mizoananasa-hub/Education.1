@@ -32,6 +32,15 @@ function getLabelColor(label: string) {
   }
 }
 
+const VALID_TABS = ["files", "notes", "summarize", "flashcards", "reviews"] as const;
+type TabValue = (typeof VALID_TABS)[number];
+
+function getTabFromSearch(): TabValue {
+  const param = new URLSearchParams(window.location.search).get("tab");
+  if (param && (VALID_TABS as readonly string[]).includes(param)) return param as TabValue;
+  return "files";
+}
+
 export default function SubjectWorkspace() {
   const [match, params] = useRoute("/student/subjects/:subject");
   const subjectName = decodeURIComponent(params?.subject || "");
@@ -39,8 +48,33 @@ export default function SubjectWorkspace() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState("files");
-  
+  const [activeTab, setActiveTab] = useState<TabValue>(getTabFromSearch);
+
+  // Sync tab when URL search param changes (sidebar navigation)
+  useEffect(() => {
+    const onPopState = () => setActiveTab(getTabFromSearch());
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  // Keep URL in sync when tab is changed via the tab bar itself
+  const handleTabChange = (val: string) => {
+    const tab = val as TabValue;
+    setActiveTab(tab);
+    const url = new URL(window.location.href);
+    if (tab === "files") {
+      url.searchParams.delete("tab");
+    } else {
+      url.searchParams.set("tab", tab);
+    }
+    window.history.replaceState(null, "", url.toString());
+  };
+
+  // Also sync on first render and whenever the search string changes
+  useEffect(() => {
+    setActiveTab(getTabFromSearch());
+  }, [window.location.search]);
+
   if (!match) return null;
 
   return (
@@ -50,15 +84,15 @@ export default function SubjectWorkspace() {
         <p className="text-muted-foreground">Access materials, manage notes, and generate AI study aids.</p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full justify-start overflow-x-auto bg-muted/50 p-1 h-auto flex-wrap">
-          <TabsTrigger value="files" className="py-2.5 px-4">Files</TabsTrigger>
-          <TabsTrigger value="notes" className="py-2.5 px-4">Notes</TabsTrigger>
-          <TabsTrigger value="summarize" className="py-2.5 px-4">Summarize</TabsTrigger>
-          <TabsTrigger value="flashcards" className="py-2.5 px-4">Flash Cards</TabsTrigger>
-          <TabsTrigger value="reviews" className="py-2.5 px-4">Reviews</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+        <TabsList className="w-full justify-start overflow-x-auto bg-muted/50 p-1 h-auto flex-wrap gap-0.5">
+          <TabsTrigger value="files" className="py-2.5 px-5 transition-all duration-200">Files</TabsTrigger>
+          <TabsTrigger value="notes" className="py-2.5 px-5 transition-all duration-200">Notes</TabsTrigger>
+          <TabsTrigger value="summarize" className="py-2.5 px-5 transition-all duration-200">Summarize</TabsTrigger>
+          <TabsTrigger value="flashcards" className="py-2.5 px-5 transition-all duration-200">Flash Cards</TabsTrigger>
+          <TabsTrigger value="reviews" className="py-2.5 px-5 transition-all duration-200">Reviews</TabsTrigger>
         </TabsList>
-        
+
         <div className="mt-6">
           <TabsContent value="files"><FilesTab subject={subjectName} /></TabsContent>
           <TabsContent value="notes"><NotesTab subject={subjectName} /></TabsContent>

@@ -1,9 +1,9 @@
 import { useAuth } from "@/components/auth-provider";
 import { Link, useLocation } from "wouter";
-import { LogOut, Menu, User, BookOpen, Users, Star, FileText } from "lucide-react";
+import { LogOut, Menu, User, BookOpen, Star, FileText, Users, Sparkles, BookText, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SelectTrigger, SelectValue } from "@/components/ui/sheet";
-import { DialogTitle } from "@/components/ui/dialog"; // Ensure accessibility
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { DialogTitle } from "@/components/ui/dialog";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -25,12 +25,48 @@ export function Layout({ children, role }: LayoutProps) {
     { name: "Ratings", href: "/teacher/ratings", icon: Star },
   ];
 
+  const subjectMatch = location.match(/^\/student\/subjects\/([^?#]+)/);
+  const currentSubjectPath = subjectMatch
+    ? `/student/subjects/${subjectMatch[1]}`
+    : null;
+
   const studentNav = [
-    { name: "Dashboard", href: "/student", icon: BookOpen },
-    { name: "All Reviews", href: "/student/reviews", icon: Star },
+    {
+      name: "Subjects",
+      href: "/student",
+      icon: BookOpen,
+      active: location === "/student" || (!!subjectMatch && !window.location.search),
+    },
+    {
+      name: "Reviews",
+      href: "/student/reviews",
+      icon: Star,
+      active: location === "/student/reviews",
+    },
+    {
+      name: "Summarizing",
+      href: currentSubjectPath ? `${currentSubjectPath}?tab=summarize` : "/student",
+      icon: Sparkles,
+      active: !!currentSubjectPath && window.location.search === "?tab=summarize",
+    },
+    {
+      name: "Notes",
+      href: currentSubjectPath ? `${currentSubjectPath}?tab=notes` : "/student",
+      icon: BookText,
+      active: !!currentSubjectPath && window.location.search === "?tab=notes",
+    },
+    {
+      name: "Flash Cards",
+      href: currentSubjectPath ? `${currentSubjectPath}?tab=flashcards` : "/student",
+      icon: Layers,
+      active: !!currentSubjectPath && window.location.search === "?tab=flashcards",
+    },
   ];
 
-  const navItems = role === "teacher" ? teacherNav : studentNav;
+  const navItems =
+    role === "teacher"
+      ? teacherNav.map((item) => ({ ...item, active: location === item.href }))
+      : studentNav;
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full bg-sidebar border-r border-sidebar-border text-sidebar-foreground">
@@ -42,31 +78,41 @@ export function Layout({ children, role }: LayoutProps) {
           <span className="font-semibold text-xl tracking-tight">Learnova</span>
         </div>
       </div>
-      
+
       <div className="flex-1 overflow-y-auto py-6 px-4">
-        <nav className="space-y-1">
+        <nav className="space-y-1 relative">
           {navItems.map((item) => (
-            <Link key={item.href} href={item.href}>
-              <span className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer",
-                location === item.href || (location.startsWith(item.href) && item.href !== "/student" && item.href !== "/teacher")
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "hover:bg-sidebar-accent/50 text-muted-foreground hover:text-sidebar-foreground"
-              )}>
-                <item.icon className="w-4 h-4" />
+            <Link key={item.name} href={item.href}>
+              <span
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer group",
+                  item.active
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground hover:shadow-sm",
+                )}
+              >
+                <item.icon
+                  className={cn(
+                    "w-4 h-4 transition-transform duration-200",
+                    item.active ? "text-primary" : "group-hover:scale-110",
+                  )}
+                />
                 {item.name}
+                {item.active && (
+                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />
+                )}
               </span>
             </Link>
           ))}
         </nav>
 
-        {role === "student" && location.startsWith("/student/subjects/") && (
+        {role === "student" && currentSubjectPath && (
           <div className="mt-8">
             <h4 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
               Current Subject
             </h4>
             <div className="px-3 py-2 text-sm font-medium text-sidebar-foreground bg-sidebar-accent/30 rounded-md">
-              {decodeURIComponent(location.split("/").pop() || "")}
+              {decodeURIComponent(currentSubjectPath.split("/").pop() || "")}
             </div>
           </div>
         )}
@@ -82,7 +128,11 @@ export function Layout({ children, role }: LayoutProps) {
             <p className="text-xs text-muted-foreground truncate capitalize">{user.role}</p>
           </div>
         </div>
-        <Button variant="outline" className="w-full justify-start text-muted-foreground" onClick={logout}>
+        <Button
+          variant="outline"
+          className="w-full justify-start text-muted-foreground"
+          onClick={logout}
+        >
           <LogOut className="w-4 h-4 mr-2" />
           Sign out
         </Button>
@@ -92,12 +142,10 @@ export function Layout({ children, role }: LayoutProps) {
 
   return (
     <div className="flex h-screen bg-background">
-      {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 flex-col">
         <SidebarContent />
       </aside>
 
-      {/* Mobile Sidebar */}
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <SheetContent side="left" className="p-0 w-64 border-r-0">
           <DialogTitle className="sr-only">Navigation Menu</DialogTitle>
