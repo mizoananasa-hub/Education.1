@@ -3,20 +3,36 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Learnova LMS API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: files
+    description: Teacher file management
+  - name: students
+    description: Student management
+  - name: ratings
+    description: Student ratings
+  - name: notebooks
+    description: Student notebooks
+  - name: notes
+    description: Notebook notes
+  - name: note-files
+    description: Notebook file uploads
+  - name: ai
+    description: AI-powered features
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +40,544 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── Auth ──────────────────────────────────────────────────────────────────
+
+  /auth/student/signup:
+    post:
+      operationId: studentSignup
+      tags: [auth]
+      summary: Student registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentSignupInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Student code already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/student/signin:
+    post:
+      operationId: studentSignin
+      tags: [auth]
+      summary: Student login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentSigninInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/teacher/signin:
+    post:
+      operationId: teacherSignin
+      tags: [auth]
+      summary: Teacher login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeacherSigninInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user from token
+      responses:
+        "200":
+          description: Current user info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Files ─────────────────────────────────────────────────────────────────
+
+  /files:
+    get:
+      operationId: getFiles
+      tags: [files]
+      summary: List files for a subject (teacher or student)
+      parameters:
+        - in: query
+          name: subject
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TeacherFile"
+    post:
+      operationId: uploadFile
+      tags: [files]
+      summary: Upload a file (teacher only)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/FileUploadInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeacherFile"
+        "400":
+          description: Invalid file type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /files/{id}:
+    delete:
+      operationId: deleteFile
+      tags: [files]
+      summary: Delete a file (teacher only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Students ──────────────────────────────────────────────────────────────
+
+  /students:
+    get:
+      operationId: getStudents
+      tags: [students]
+      summary: List all students (teacher only)
+      parameters:
+        - in: query
+          name: search
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Student"
+
+  # ── Ratings ───────────────────────────────────────────────────────────────
+
+  /ratings:
+    get:
+      operationId: getRatingsBySubject
+      tags: [ratings]
+      summary: List ratings for teacher's subject
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Rating"
+
+  /ratings/my:
+    get:
+      operationId: getMyRatings
+      tags: [ratings]
+      summary: Get current student's ratings (all subjects)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Rating"
+
+  /ratings/subject/{subject}:
+    get:
+      operationId: getMyRatingBySubject
+      tags: [ratings]
+      summary: Get student's rating for a specific subject
+      parameters:
+        - in: path
+          name: subject
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rating"
+        "404":
+          description: Not rated yet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /ratings/{studentId}:
+    put:
+      operationId: upsertRating
+      tags: [ratings]
+      summary: Create or update a student rating (teacher only, upsert by student+subject)
+      parameters:
+        - in: path
+          name: studentId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RatingInput"
+      responses:
+        "200":
+          description: Upserted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rating"
+
+  # ── Notebooks ─────────────────────────────────────────────────────────────
+
+  /notebooks:
+    get:
+      operationId: getNotebooks
+      tags: [notebooks]
+      summary: List student's notebooks for a subject
+      parameters:
+        - in: query
+          name: subject
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notebook"
+    post:
+      operationId: createNotebook
+      tags: [notebooks]
+      summary: Create a notebook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotebookInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notebook"
+
+  /notebooks/{id}:
+    patch:
+      operationId: updateNotebook
+      tags: [notebooks]
+      summary: Rename a notebook
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotebookUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notebook"
+    delete:
+      operationId: deleteNotebook
+      tags: [notebooks]
+      summary: Delete a notebook
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Notes ─────────────────────────────────────────────────────────────────
+
+  /notes:
+    get:
+      operationId: getNotes
+      tags: [notes]
+      summary: List notes for a notebook
+      parameters:
+        - in: query
+          name: notebookId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Note"
+    post:
+      operationId: createNote
+      tags: [notes]
+      summary: Create a note
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoteInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+
+  /notes/{id}:
+    patch:
+      operationId: updateNote
+      tags: [notes]
+      summary: Update note content
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoteUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+    delete:
+      operationId: deleteNote
+      tags: [notes]
+      summary: Delete a note
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Note Files ────────────────────────────────────────────────────────────
+
+  /note-files:
+    get:
+      operationId: getNoteFiles
+      tags: [note-files]
+      summary: List uploaded files for a notebook
+      parameters:
+        - in: query
+          name: notebookId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NoteFile"
+    post:
+      operationId: uploadNoteFile
+      tags: [note-files]
+      summary: Upload a file to a notebook
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/NoteFileUploadInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoteFile"
+
+  /note-files/{id}:
+    delete:
+      operationId: deleteNoteFile
+      tags: [note-files]
+      summary: Delete a note file
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── AI ────────────────────────────────────────────────────────────────────
+
+  /ai/summarize:
+    post:
+      operationId: summarizeFile
+      tags: [ai]
+      summary: Summarize a teacher file using AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SummarizeInput"
+      responses:
+        "200":
+          description: Summary result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SummaryResult"
+        "400":
+          description: Unsupported file type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /ai/flashcards:
+    post:
+      operationId: generateFlashcards
+      tags: [ai]
+      summary: Generate flashcards from selected notebooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FlashcardsInput"
+      responses:
+        "200":
+          description: Generated flashcards
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlashcardsResult"
+        "400":
+          description: No content found in notebooks
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +585,334 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    # ── Auth schemas ──────────────────────────────────────────────────────
+
+    StudentSignupInput:
+      type: object
+      required: [fullName, studentCode, password, confirmPassword, grade, religion]
+      properties:
+        fullName:
+          type: string
+          minLength: 2
+        studentCode:
+          type: string
+          minLength: 3
+        password:
+          type: string
+          minLength: 6
+        confirmPassword:
+          type: string
+        grade:
+          type: integer
+          minimum: 1
+          maximum: 12
+        religion:
+          type: string
+          enum: [Islamic, Christian]
+
+    StudentSigninInput:
+      type: object
+      required: [studentCode, password]
+      properties:
+        studentCode:
+          type: string
+        password:
+          type: string
+
+    TeacherSigninInput:
+      type: object
+      required: [fullName, subject, subjectPassword]
+      properties:
+        fullName:
+          type: string
+        subject:
+          type: string
+        subjectPassword:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [token, user]
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/UserInfo"
+
+    UserInfo:
+      type: object
+      required: [role]
+      properties:
+        id:
+          type: ["integer", "null"]
+        fullName:
+          type: string
+        studentCode:
+          type: ["string", "null"]
+        grade:
+          type: ["integer", "null"]
+        religion:
+          type: ["string", "null"]
+        subject:
+          type: ["string", "null"]
+        role:
+          type: string
+          enum: [student, teacher]
+
+    MeResponse:
+      type: object
+      required: [role]
+      properties:
+        id:
+          type: ["integer", "null"]
+        fullName:
+          type: string
+        studentCode:
+          type: ["string", "null"]
+        grade:
+          type: ["integer", "null"]
+        religion:
+          type: ["string", "null"]
+        subject:
+          type: ["string", "null"]
+        role:
+          type: string
+          enum: [student, teacher]
+
+    # ── File schemas ──────────────────────────────────────────────────────
+
+    TeacherFile:
+      type: object
+      required: [id, filename, filepath, subject, uploadedBy, createdAt]
+      properties:
+        id:
+          type: integer
+        filename:
+          type: string
+        filepath:
+          type: string
+        subject:
+          type: string
+        uploadedBy:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    FileUploadInput:
+      type: object
+      required: [subject]
+      properties:
+        subject:
+          type: string
+
+    # ── Student schemas ───────────────────────────────────────────────────
+
+    Student:
+      type: object
+      required: [id, fullName, studentCode, grade, religion, createdAt]
+      properties:
+        id:
+          type: integer
+        fullName:
+          type: string
+        studentCode:
+          type: string
+        grade:
+          type: integer
+        religion:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    # ── Rating schemas ────────────────────────────────────────────────────
+
+    Rating:
+      type: object
+      required: [id, studentId, subject, teacherName, score, label, createdAt]
+      properties:
+        id:
+          type: integer
+        studentId:
+          type: integer
+        subject:
+          type: string
+        teacherName:
+          type: string
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        label:
+          type: string
+          enum: [Excellent, Good, Average, "Needs Improvement"]
+        comment:
+          type: ["string", "null"]
+        studentName:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    RatingInput:
+      type: object
+      required: [score, comment]
+      properties:
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        comment:
+          type: string
+
+    # ── Notebook schemas ──────────────────────────────────────────────────
+
+    Notebook:
+      type: object
+      required: [id, studentId, subject, notebookName, createdAt]
+      properties:
+        id:
+          type: integer
+        studentId:
+          type: integer
+        subject:
+          type: string
+        notebookName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    NotebookInput:
+      type: object
+      required: [subject, notebookName]
+      properties:
+        subject:
+          type: string
+        notebookName:
+          type: string
+
+    NotebookUpdate:
+      type: object
+      required: [notebookName]
+      properties:
+        notebookName:
+          type: string
+
+    # ── Note schemas ──────────────────────────────────────────────────────
+
+    Note:
+      type: object
+      required: [id, notebookId, content, createdAt]
+      properties:
+        id:
+          type: integer
+        notebookId:
+          type: integer
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    NoteInput:
+      type: object
+      required: [notebookId, content]
+      properties:
+        notebookId:
+          type: integer
+        content:
+          type: string
+
+    NoteUpdate:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+
+    # ── Note File schemas ─────────────────────────────────────────────────
+
+    NoteFile:
+      type: object
+      required: [id, notebookId, filename, filepath, createdAt]
+      properties:
+        id:
+          type: integer
+        notebookId:
+          type: integer
+        filename:
+          type: string
+        filepath:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    NoteFileUploadInput:
+      type: object
+      required: [notebookId]
+      properties:
+        notebookId:
+          type: integer
+
+    # ── AI schemas ────────────────────────────────────────────────────────
+
+    SummarizeInput:
+      type: object
+      required: [fileId]
+      properties:
+        fileId:
+          type: integer
+
+    SummaryResult:
+      type: object
+      required: [mainTopic, keyPoints, importantNotes]
+      properties:
+        mainTopic:
+          type: string
+        keyPoints:
+          type: array
+          items:
+            type: string
+        importantNotes:
+          type: array
+          items:
+            type: string
+
+    FlashcardsInput:
+      type: object
+      required: [notebookIds]
+      properties:
+        notebookIds:
+          type: array
+          items:
+            type: integer
+
+    Flashcard:
+      type: object
+      required: [question, answer]
+      properties:
+        question:
+          type: string
+        answer:
+          type: string
+
+    FlashcardsResult:
+      type: object
+      required: [flashcards]
+      properties:
+        flashcards:
+          type: array
+          items:
+            $ref: "#/components/schemas/Flashcard"

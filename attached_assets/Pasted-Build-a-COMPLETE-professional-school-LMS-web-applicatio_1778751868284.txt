@@ -1,0 +1,504 @@
+Build a COMPLETE professional school LMS web application called "Learnova" using:
+
+* Frontend: React + Vite + Tailwind CSS
+* Backend: Node.js + Express
+* Database: PostgreSQL
+* Auth: JWT + bcrypt
+* AI: Anthropic Claude API
+* File Uploads: Multer
+
+⚠️ IMPORTANT:
+This must feel like a REAL modern SaaS platform, not a school project.
+The UI must be polished, premium, responsive, animated, and production-quality.
+
+Use:
+
+* Sidebar layouts
+* Smooth hover effects
+* Card animations
+* Modern typography
+* Soft shadows
+* Professional spacing
+* Smooth transitions
+* Loading states
+* Empty states
+* Responsive design
+
+DO NOT make the UI goofy, cartoonish, oversized, colorful, or childish.
+
+Keep the design minimal, elegant, and modern.
+
+App name:
+"Learnova"
+
+Tagline:
+"Smart Learning Platform"
+
+Keep using the existing logo if available.
+
+Show branding in:
+
+* Sidebar
+* Sign in
+* Sign up
+* Browser title
+
+---
+
+## STUDENT AUTH
+
+Sign Up fields:
+
+* Full Name
+* Student Code
+* Password
+* Confirm Password
+* Grade selector (1–12)
+* Religion selector:
+
+  * Islamic
+  * Christian
+
+Rules:
+
+* Hash passwords using bcrypt
+* Store in PostgreSQL
+* Student code must be unique
+
+Sign In:
+
+* Student Code
+* Password
+
+Use JWT authentication.
+
+Persist auth state correctly:
+
+* No logout on refresh
+* No “must signup again” bug
+
+---
+
+## TEACHER AUTH
+
+Teachers CANNOT register.
+
+Teacher Login fields:
+
+* Full Name
+* Subject dropdown
+* Subject password
+
+Store teacher name in JWT/session.
+
+Teacher subject passwords are backend-only.
+
+Never expose passwords in frontend.
+
+Backend-only config:
+
+Mathematics → Math@LMS1
+French → French@LMS2
+English → English@LMS3
+Arabic → Arabic@LMS4
+ICT → ICT@LMS5
+Science → Science@LMS6
+Social Studies → Social@LMS7
+Islamic Revision → Islamic@LMS8
+Christian Religion → Christian@LMS9
+Biology → Bio@LMS10
+Physics → Physics@LMS11
+Chemistry → Chem@LMS12
+
+Use secure validation.
+
+Grade < 9:
+
+* Mathematics
+* French
+* English
+* Arabic
+* ICT
+* Science
+* Social Studies
+* Religion subject ONLY
+
+Grade ≥ or = 9:
+
+* Mathematics
+* French
+* English
+* Arabic
+* ICT
+* Biology
+* Physics
+* Chemistry
+* Social Studies
+* Religion subject ONLY
+
+Religion Logic:
+
+* Islamic students ONLY see Islamic Revision
+* Christian students ONLY see Christian Religion
+
+Never show both.
+
+---
+
+## TEACHER DASHBOARD
+
+Sidebar tabs:
+
+* Files
+* Students
+* Ratings
+
+Use animated sidebar interactions.
+
+---
+
+## FILES TAB
+
+Teacher can:
+
+* Upload files
+* View files
+* Delete files
+
+Allowed:
+
+* PDF
+* DOC
+* PPT
+* TXT
+* Images
+
+Display files as modern cards.
+
+Each card:
+
+* File name
+* Type badge
+* Upload date
+* Actions
+
+---
+
+## STUDENTS TAB
+
+Show:
+
+* Searchable student table
+* Search by name/code
+
+Each student:
+
+* Rate Student button
+
+---
+
+## RATING MODAL
+
+Fields:
+
+* Score slider (0–100)
+* Auto-generated label:
+
+  * Excellent
+  * Good
+  * Average
+  * Needs Improvement
+* Comment textarea
+
+When submitted:
+Store:
+
+* student_id
+* subject
+* teacher_name
+* score
+* label
+* comment
+
+Teacher name comes from login session.
+
+Ratings must be UNIQUE per:
+(student_id + subject)
+
+EXAMPLE:
+
+English → 50
+Math → 80
+
+Must NOT duplicate across subjects.
+
+Add DB constraint:
+UNIQUE(student_id, subject)
+
+Use UPSERT logic.
+
+Sidebar tabs:
+
+* Subjects
+* Reviews
+* Summarizing
+* Notes
+* Flash Cards
+
+Use:
+
+* Hover glow
+* Sliding active indicator
+* Smooth animations
+
+Show subject cards.
+
+Each card:
+
+* Subject name
+* Subject icon
+* Hover lift animation
+
+Click opens subject workspace.
+
+Inside each subject:
+Tabs:
+
+* Files
+* Notes
+* Summarize
+* Flash Cards
+* Reviews
+
+Students can:
+
+* View teacher files
+* Open files in new tab
+
+Works ONLY on:
+
+* PDF
+* TXT
+
+Student selects file.
+
+Extract text and send to Claude API.
+
+Return:
+
+* Main Topic
+* Key Concepts
+* Important Notes
+
+Display in premium structured cards.
+
+Add:
+
+* Loading animation
+* Fade-in reveal
+
+Students create PERSONAL notebooks.
+
+Each subject has notebooks.
+
+Notebook features:
+
+* Create notebook
+* Rename notebook
+* Delete notebook
+
+Display notebooks as modern cards.
+
+Students can:
+
+* Write notes manually
+* Upload note files
+
+Allowed uploads:
+
+* PDF
+* TXT
+* DOC
+
+Show:
+
+* Written notes
+* Uploaded files
+
+Editable notes area.
+
+Placeholder:
+"Write your notes here..."
+
+IMPORTANT:
+
+Flashcards are generated ONLY from student-selected notebooks.
+
+NOT from teacher files.
+
+Flow:
+
+1. Student selects notebooks
+2. System combines:
+
+   * Written notes
+   * Uploaded note files
+3. Sends content to Claude AI
+4. Generates flashcards
+
+Use:
+
+* 3D flip animation
+* Smooth transitions
+* Hover scaling
+* Previous/Next controls
+* Progress indicator
+
+If no notebook selected:
+"Please select at least one notebook."
+
+If notebook empty:
+"Selected notebooks have no notes."
+
+Show rating cards.
+
+Each card:
+
+* Subject
+* Score
+* Label
+* Comment
+* Teacher name
+
+Add:
+
+* Animated progress bar
+* Professional styling
+
+Inside subject review page:
+Show ONLY that subject’s rating.
+
+Use REAL Anthropic Claude API.
+
+NO fake responses.
+
+---
+
+## SUMMARIZE PROMPT
+
+Return:
+
+* Main Topic
+* Key Points
+* Important Notes
+
+---
+
+## FLASHCARDS PROMPT
+
+Generate:
+10 flashcards
+
+Each:
+
+* question
+* answer
+
+Return JSON.
+
+students
+
+* id
+* full_name
+* student_code
+* password_hash
+* grade
+* religion
+* created_at
+
+files
+
+* id
+* filename
+* filepath
+* subject
+* uploaded_by
+* created_at
+
+ratings
+
+* id
+* student_id
+* subject
+* teacher_name
+* score
+* label
+* comment
+* created_at
+
+Constraint:
+UNIQUE(student_id, subject)
+
+notebooks
+
+* id
+* student_id
+* subject
+* notebook_name
+* created_at
+
+notes
+
+* id
+* notebook_id
+* content
+* created_at
+
+note_files
+
+* id
+* notebook_id
+* filename
+* filepath
+* created_at
+
+- Protect routes with JWT middleware
+- Validate all inputs
+- Use bcrypt
+- Never expose passwords
+- Prevent duplicate ratings
+- Restrict uploads
+- Add proper error handling
+
+The app must feel like:
+
+* Notion
+* Google Classroom
+* Quizlet
+* Modern SaaS dashboards
+
+NOT like:
+
+* A beginner school project
+* A childish template
+* A colorful toy UI
+
+Build clean modular code:
+
+* Components
+* Routes
+* Controllers
+* Middleware
+* Database models
+
+Ensure:
+
+* Smooth UX
+* Real functionality
+* Proper state management
+* Persistent auth
+* Responsive design
+* Production-ready structure
+
+DO NOT USE MOCK DATA.
+USE REAL DATABASE + REAL API INTEGRATION.
