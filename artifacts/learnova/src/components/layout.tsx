@@ -2,12 +2,12 @@ import { useAuth } from "@/components/auth-provider";
 import { Link, useLocation } from "wouter";
 import {
   LogOut, Menu, User, BookOpen, Star, FileText, Users,
-  Sparkles, BookText, Layers, Settings,
+  Sparkles, BookText, Layers, Settings, Bell, ClipboardList,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { DialogTitle } from "@/components/ui/dialog";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 interface LayoutProps {
@@ -19,13 +19,22 @@ export function Layout({ children, role }: LayoutProps) {
   const { user, logout } = useAuth();
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [search, setSearch] = useState(window.location.search);
+
+  useEffect(() => {
+    const onPopState = () => setSearch(window.location.search);
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   if (!user) return null;
 
   const teacherNav = [
     { name: "Files", href: "/teacher/files", icon: FileText },
     { name: "Students", href: "/teacher/students", icon: Users },
+    { name: "Homework", href: "/teacher/homework", icon: ClipboardList },
     { name: "Ratings", href: "/teacher/ratings", icon: Star },
+    { name: "Notifications", href: "/teacher/notifications", icon: Bell },
     { name: "Settings", href: "/teacher/settings", icon: Settings },
   ];
 
@@ -39,7 +48,13 @@ export function Layout({ children, role }: LayoutProps) {
       name: "Subjects",
       href: "/student",
       icon: BookOpen,
-      active: location === "/student" || (!!subjectMatch && !window.location.search),
+      active: location === "/student" || (!!subjectMatch && !search),
+    },
+    {
+      name: "Homework",
+      href: "/student/homework",
+      icon: ClipboardList,
+      active: location.startsWith("/student/homework"),
     },
     {
       name: "Reviews",
@@ -51,19 +66,25 @@ export function Layout({ children, role }: LayoutProps) {
       name: "Summarizing",
       href: currentSubjectPath ? `${currentSubjectPath}?tab=summarize` : "/student",
       icon: Sparkles,
-      active: !!currentSubjectPath && window.location.search === "?tab=summarize",
+      active: !!currentSubjectPath && search === "?tab=summarize",
     },
     {
       name: "Notes",
       href: currentSubjectPath ? `${currentSubjectPath}?tab=notes` : "/student",
       icon: BookText,
-      active: !!currentSubjectPath && window.location.search === "?tab=notes",
+      active: !!currentSubjectPath && search === "?tab=notes",
     },
     {
       name: "Flash Cards",
       href: currentSubjectPath ? `${currentSubjectPath}?tab=flashcards` : "/student",
       icon: Layers,
-      active: !!currentSubjectPath && window.location.search === "?tab=flashcards",
+      active: !!currentSubjectPath && search === "?tab=flashcards",
+    },
+    {
+      name: "Notifications",
+      href: "/student/notifications",
+      icon: Bell,
+      active: location === "/student/notifications",
     },
     {
       name: "Settings",
@@ -92,8 +113,8 @@ export function Layout({ children, role }: LayoutProps) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto py-6 px-4">
-        <nav className="space-y-1 relative">
+      <div className="flex-1 overflow-y-auto py-4 px-3">
+        <nav className="space-y-0.5">
           {navItems.map((item) => (
             <Link key={item.name} href={item.href}>
               <span
@@ -101,18 +122,18 @@ export function Layout({ children, role }: LayoutProps) {
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer group",
                   item.active
                     ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground hover:shadow-sm",
+                    : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
                 )}
               >
                 <item.icon
                   className={cn(
-                    "w-4 h-4 transition-transform duration-200",
+                    "w-4 h-4 shrink-0 transition-transform duration-200",
                     item.active ? "text-primary" : "group-hover:scale-110",
                   )}
                 />
-                {item.name}
+                <span className="flex-1">{item.name}</span>
                 {item.active && (
-                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
                 )}
               </span>
             </Link>
@@ -120,11 +141,11 @@ export function Layout({ children, role }: LayoutProps) {
         </nav>
 
         {role === "student" && currentSubjectPath && (
-          <div className="mt-8">
-            <h4 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              Current Subject
-            </h4>
-            <div className="px-3 py-2 text-sm font-medium text-sidebar-foreground bg-sidebar-accent/30 rounded-md">
+          <div className="mt-6 px-1">
+            <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+              Active Subject
+            </p>
+            <div className="px-3 py-2 text-sm font-medium text-sidebar-foreground bg-sidebar-accent/30 rounded-md truncate">
               {decodeURIComponent(currentSubjectPath.split("/").pop() || "")}
             </div>
           </div>
@@ -132,8 +153,8 @@ export function Layout({ children, role }: LayoutProps) {
       </div>
 
       <div className="p-4 border-t border-sidebar-border">
-        <div className="flex items-center gap-3 px-3 py-2 mb-4 rounded-md bg-sidebar-accent/50">
-          <div className="w-8 h-8 rounded-full bg-sidebar-primary/20 flex items-center justify-center text-sidebar-primary">
+        <div className="flex items-center gap-3 px-3 py-2 mb-3 rounded-md bg-sidebar-accent/50">
+          <div className="w-8 h-8 rounded-full bg-sidebar-primary/20 flex items-center justify-center text-sidebar-primary shrink-0">
             <User className="w-4 h-4" />
           </div>
           <div className="flex-1 min-w-0">

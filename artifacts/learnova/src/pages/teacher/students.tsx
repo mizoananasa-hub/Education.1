@@ -69,7 +69,7 @@ export default function TeacherStudents() {
       onError: (err) => {
         toast({ 
           title: "Failed to save rating", 
-          description: err.data?.error || "An error occurred", 
+          description: (err as any)?.data?.error || "An error occurred", 
           variant: "destructive" 
         });
       }

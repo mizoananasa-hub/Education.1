@@ -11,13 +11,16 @@ import StudentSignup from "@/pages/student-signup";
 import TeacherSignin from "@/pages/teacher-signin";
 import NotFound from "@/pages/not-found";
 import SettingsPage from "@/pages/settings";
+import NotificationsPage from "@/pages/notifications";
 
 import TeacherFiles from "@/pages/teacher/files";
 import TeacherStudents from "@/pages/teacher/students";
 import TeacherRatings from "@/pages/teacher/ratings";
+import TeacherHomework from "@/pages/teacher/homework";
 
 import StudentDashboard from "@/pages/student/dashboard";
 import StudentReviews from "@/pages/student/reviews";
+import StudentHomework from "@/pages/student/homework";
 import SubjectWorkspace from "@/pages/student/subject-workspace";
 
 const queryClient = new QueryClient({
@@ -64,8 +67,14 @@ function Router() {
       <Route path="/teacher/students">
         {() => <ProtectedRoute component={TeacherStudents} role="teacher" />}
       </Route>
+      <Route path="/teacher/homework">
+        {() => <ProtectedRoute component={TeacherHomework} role="teacher" />}
+      </Route>
       <Route path="/teacher/ratings">
         {() => <ProtectedRoute component={TeacherRatings} role="teacher" />}
+      </Route>
+      <Route path="/teacher/notifications">
+        {() => <ProtectedRoute component={NotificationsPage} role="teacher" />}
       </Route>
       <Route path="/teacher/settings">
         {() => <ProtectedRoute component={SettingsPage} role="teacher" />}
@@ -75,8 +84,14 @@ function Router() {
       <Route path="/student">
         {() => <ProtectedRoute component={StudentDashboard} role="student" />}
       </Route>
+      <Route path="/student/homework">
+        {() => <ProtectedRoute component={StudentHomework} role="student" />}
+      </Route>
       <Route path="/student/reviews">
         {() => <ProtectedRoute component={StudentReviews} role="student" />}
+      </Route>
+      <Route path="/student/notifications">
+        {() => <ProtectedRoute component={NotificationsPage} role="student" />}
       </Route>
       <Route path="/student/settings">
         {() => <ProtectedRoute component={SettingsPage} role="student" />}

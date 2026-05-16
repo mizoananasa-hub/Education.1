@@ -250,7 +250,7 @@ function NoteEditor({ notebookId, onBack }: { notebookId: number, onBack: () => 
   const activeNote = notes?.[0];
   const [content, setContent] = useState("");
   const initialized = useRef(false);
-  const saveTimeout = useRef<NodeJS.Timeout>();
+  const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (activeNote && !initialized.current) {

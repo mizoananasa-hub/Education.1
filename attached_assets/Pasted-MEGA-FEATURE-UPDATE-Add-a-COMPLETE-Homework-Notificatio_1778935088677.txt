@@ -1,0 +1,368 @@
+MEGA FEATURE UPDATE — Add a COMPLETE Homework & Notification System to Learnova.
+
+⚠️ IMPORTANT:
+
+* DO NOT rebuild the app
+* DO NOT break existing dashboards
+* EXTEND the current architecture professionally
+* Keep all existing styling and animations
+* Make this feel like a premium real-world LMS
+
+---
+
+## 👨‍🏫 TEACHER DASHBOARD TABS
+
+Teacher sidebar MUST now contain:
+
+1. Files
+2. Students
+3. Homework
+4. Ratings
+5. Notifications
+6. Settings
+
+---
+
+## 🎒 STUDENT DASHBOARD TABS
+
+Student sidebar MUST now contain:
+
+1. Subjects
+2. Homework
+3. Reviews
+4. Summarizing
+5. Notes
+6. Flash Cards
+7. Notifications
+8. Settings
+
+Use:
+
+* Smooth hover animations
+* Animated active indicator
+* Professional icons
+* Sliding transitions
+* Modern SaaS sidebar design
+
+---
+
+## 📝 HOMEWORK SYSTEM
+
+Teachers can now CREATE homework assignments for their subject.
+
+This must be a REAL dynamic homework builder.
+
+NOT static forms.
+
+Teacher clicks:
+"Create Homework"
+
+Open a professional modal/page builder.
+
+Fields:
+
+* Homework title
+* Description/instructions
+* Due date
+* Optional time limit
+* Subject (auto-filled from teacher account)
+* Teacher name (auto-filled from login)
+
+---
+
+## ❓ DYNAMIC QUESTION BUILDER
+
+Teacher can ADD MULTIPLE QUESTIONS dynamically.
+
+Each time the teacher adds a question:
+
+Allow selecting QUESTION TYPE.
+
+---
+
+## ✅ SUPPORTED QUESTION TYPES
+
+1. Multiple Choice
+2. True / False
+3. Short Answer
+4. Paragraph Answer
+5. Fill in the Blank
+
+Use animated question cards.
+
+Each question must have grading mode selection.
+
+---
+
+## ⚙️ OPTION 1 — AUTO GRADED
+
+Teacher provides:
+
+* Correct answer
+
+System automatically grades student response.
+
+Supported for:
+
+* Multiple Choice
+* True/False
+* Fill in the Blank
+* Short Answer (basic exact match)
+
+---
+
+## 🧑‍🏫 OPTION 2 — MANUAL GRADING
+
+Teacher grades the question manually later.
+
+Useful for:
+
+* Paragraph answers
+* Long responses
+
+Teacher selects:
+"Grade manually"
+
+Allow:
+
+* Add image to question
+* Add explanation
+* Add point value
+
+---
+
+## 🎒 STUDENT HOMEWORK EXPERIENCE
+
+Students open:
+Homework tab
+
+Show homework cards with:
+
+* Homework title
+* Subject
+* Teacher name
+* Due date
+* Status:
+
+  * Not Started
+  * In Progress
+  * Submitted
+  * Graded
+
+IMPORTANT:
+Students MUST clearly see:
+
+* Which teacher created the homework
+* Which subject it belongs to
+
+Example:
+"English Homework — by Mr. Ahmed"
+
+---
+
+## 🧠 HOMEWORK TAKING EXPERIENCE
+
+Modern professional exam UI.
+
+Features:
+
+* Smooth question navigation
+* Progress tracker
+* Autosave answers
+* Timer display (if enabled)
+* Submit confirmation modal
+
+---
+
+## 📊 AUTO GRADED QUESTIONS
+
+System instantly calculates:
+
+* Correct answers
+* Score
+* Percentage
+
+---
+
+## 📝 MANUAL GRADED QUESTIONS
+
+Teacher receives submissions needing review.
+
+Teacher can:
+
+* Open student answers
+* Add score
+* Add feedback/comments
+
+---
+
+## 🔔 NOTIFICATION SYSTEM
+
+Add a REAL Notifications system.
+
+Students must receive notifications for:
+
+* New homework assigned
+* Homework graded
+* New file uploaded
+* New rating received
+* AI quiz completed
+
+Teachers receive notifications for:
+
+* Homework submissions
+* Manual grading required
+
+Create a dedicated Notifications tab.
+
+Use:
+
+* Notification cards
+* Read/unread states
+* Icons
+* Timestamps
+* Smooth dropdown animations
+
+---
+
+## ➡️ SMART NOTIFICATION REDIRECTS
+
+IMPORTANT FEATURE:
+
+If student clicks:
+"New Homework Available"
+
+Automatically redirect to:
+Homework tab → specific homework
+
+If student clicks:
+"Homework Graded"
+
+Open:
+Homework results page
+
+---
+
+## 🗄️ DATABASE TABLES
+
+Create proper tables:
+
+### homeworks
+
+* id
+* subject
+* teacher_name
+* teacher_subject
+* title
+* description
+* due_date
+* time_limit
+* created_at
+
+### homework_questions
+
+* id
+* homework_id
+* question_text
+* question_type
+* grading_mode
+* correct_answer
+* points
+* created_at
+
+### homework_submissions
+
+* id
+* homework_id
+* student_id
+* submitted_at
+* total_score
+* percentage
+* status
+
+### homework_answers
+
+* id
+* submission_id
+* question_id
+* answer
+* auto_score
+* manual_score
+* teacher_feedback
+
+### notifications
+
+* id
+* user_id
+* type
+* title
+* message
+* related_id
+* is_read
+* created_at
+
+---
+
+## 🐛 IMPORTANT AUTHENTICATION BUG FIX
+
+Fix a CURRENT BUG in the authentication/session system.
+
+Problem:
+
+Sometimes when a teacher or student signs in successfully, the app unexpectedly redirects back to the landing page instead of staying inside the dashboard.
+
+This MUST be fixed professionally.
+
+Requirements:
+
+* Preserve authenticated session correctly
+* Prevent unwanted redirects after login
+* Ensure JWT/session tokens persist properly
+* Fix route protection logic
+* Ensure dashboard state remains after refresh
+* Prevent logout caused by page reloads
+* Add proper auth loading state before redirect checks
+* Ensure role-based routing works consistently for both teachers and students
+
+Expected behavior:
+
+* Teacher login → always redirects to Teacher Dashboard
+* Student login → always redirects to Student Dashboard
+* Refreshing the page should KEEP the user logged in
+* Users should only return to landing page after explicit logout or expired session
+
+---
+
+## 🎨 UI & UX REQUIREMENTS
+
+The Homework system should feel like:
+
+* Google Forms
+* Canvas LMS
+* Modern exam platforms
+
+Use:
+
+* Elegant cards
+* Smooth transitions
+* Hover effects
+* Progress bars
+* Modern inputs
+* Premium layouts
+
+NOT:
+
+* Cluttered
+* Childish
+* Basic forms
+
+---
+
+## ⚠️ FINAL RULES
+
+* DO NOT break existing systems
+* KEEP all current features
+* KEEP existing dashboard structure
+* Integrate homework professionally into Learnova
+
+The app should now feel like a REAL advanced AI-powered school ecosystem.

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { useLocation } from "wouter";
-import { useGetMe } from "@workspace/api-client-react";
+import { useGetMe, getGetMeQueryKey } from "@workspace/api-client-react";
 import { setToken, getToken } from "@/lib/auth";
 import { Spinner } from "./ui/spinner";
 import type { MeResponse } from "@workspace/api-client-react";
@@ -18,26 +18,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [_, setLocation] = useLocation();
   const [token, setTokenState] = useState<string | null>(getToken());
 
-  // Only run the query if we have a token
-  const { data: user, isLoading: isQueryLoading, error, refetch } = useGetMe({
+  const {
+    data: user,
+    isFetching,
+    isLoading: isQueryLoading,
+    error,
+  } = useGetMe({
     query: {
+      queryKey: getGetMeQueryKey(),
       enabled: !!token,
       retry: false,
+      staleTime: 5 * 60 * 1000,
     },
   });
 
-  const isLoading = !!token && isQueryLoading;
+  // isLoading: true whenever token exists but user hasn't resolved yet (prevents premature redirects)
+  const isLoading = !!token && (isFetching || isQueryLoading || (!user && !error));
 
   useEffect(() => {
     if (error && token) {
       logout();
     }
-  }, [error, token]);
+  }, [error]);
 
   const login = (newToken: string) => {
     setToken(newToken);
     setTokenState(newToken);
-    refetch();
+    // Enabled query will auto-fetch when token state changes
   };
 
   const logout = () => {
@@ -49,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
-        <Spinner size="lg" />
+        <Spinner className="w-10 h-10" />
       </div>
     );
   }

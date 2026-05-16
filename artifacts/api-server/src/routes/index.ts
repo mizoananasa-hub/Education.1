@@ -8,6 +8,8 @@ import notebooksRouter from "./notebooks";
 import notesRouter from "./notes";
 import noteFilesRouter from "./note-files";
 import aiRouter from "./ai";
+import homeworkRouter from "./homework";
+import notificationsRouter from "./notifications";
 
 const router: IRouter = Router();
 
@@ -20,5 +22,7 @@ router.use(notebooksRouter);
 router.use(notesRouter);
 router.use(noteFilesRouter);
 router.use(aiRouter);
+router.use(homeworkRouter);
+router.use(notificationsRouter);
 
 export default router;
