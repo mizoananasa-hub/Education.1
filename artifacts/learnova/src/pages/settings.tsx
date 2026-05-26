@@ -96,7 +96,7 @@ export default function Settings() {
 
   const role = user?.role ?? "student";
 
-  const visibleNav = NAV_ITEMS.filter((item) => item.roles.includes(role));
+  const visibleNav = NAV_ITEMS.filter((item) => item.roles.includes(role as "student" | "teacher"));
 
   const handleThemeToggle = (dark: boolean) => {
     const next: "light" | "dark" = dark ? "dark" : "light";

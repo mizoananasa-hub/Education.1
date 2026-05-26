@@ -7,8 +7,11 @@ import { Layout } from "@/components/layout";
 
 import Landing from "@/pages/landing";
 import StudentSignin from "@/pages/student-signin";
-import StudentSignup from "@/pages/student-signup";
+import StudentRequest from "@/pages/student-request";
 import TeacherSignin from "@/pages/teacher-signin";
+import TeacherRequest from "@/pages/teacher-request";
+import AdminSignin from "@/pages/admin-signin";
+import AdminDashboard from "@/pages/admin-dashboard";
 import NotFound from "@/pages/not-found";
 import SettingsPage from "@/pages/settings";
 import NotificationsPage from "@/pages/notifications";
@@ -41,6 +44,10 @@ function ProtectedRoute({ component: Component, role, ...rest }: any) {
     return <Redirect to="/" />;
   }
 
+  if (role === "admin") {
+    return <Component {...rest} />;
+  }
+
   return (
     <Layout role={role}>
       <Component {...rest} />
@@ -51,11 +58,21 @@ function ProtectedRoute({ component: Component, role, ...rest }: any) {
 function Router() {
   return (
     <Switch>
-      {/* Auth routes */}
+      {/* Public routes */}
       <Route path="/" component={Landing} />
       <Route path="/student/signin" component={StudentSignin} />
-      <Route path="/student/signup" component={StudentSignup} />
+      <Route path="/student/request" component={StudentRequest} />
       <Route path="/teacher/signin" component={TeacherSignin} />
+      <Route path="/teacher/request" component={TeacherRequest} />
+      <Route path="/admin/signin" component={AdminSignin} />
+
+      {/* Admin routes */}
+      <Route path="/admin">
+        {() => <ProtectedRoute component={AdminDashboard} role="admin" />}
+      </Route>
+      <Route path="/admin/:tab">
+        {() => <ProtectedRoute component={AdminDashboard} role="admin" />}
+      </Route>
 
       {/* Teacher routes */}
       <Route path="/teacher">

@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { ArrowRight, BookOpen, GraduationCap, Monitor } from "lucide-react";
+import { ArrowRight, BookOpen, GraduationCap, Shield, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Landing() {
@@ -12,12 +12,18 @@ export default function Landing() {
           </div>
           <span className="font-semibold text-xl tracking-tight">Learnova</span>
         </div>
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" asChild>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" asChild>
             <Link href="/teacher/signin">Teacher Login</Link>
           </Button>
-          <Button asChild>
+          <Button variant="ghost" size="sm" asChild>
             <Link href="/student/signin">Student Login</Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild className="border-destructive/30 text-destructive hover:bg-destructive/5 hover:text-destructive">
+            <Link href="/admin/signin">
+              <Shield className="w-3.5 h-3.5 mr-1.5" />
+              Admin
+            </Link>
           </Button>
         </div>
       </header>
@@ -38,7 +44,8 @@ export default function Landing() {
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl">
-          <Link href="/student/signin" className="group relative flex flex-col items-start p-8 rounded-2xl bg-card border border-card-border hover:border-primary/50 transition-all hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 overflow-hidden">
+          {/* Student card */}
+          <div className="group relative flex flex-col items-start p-8 rounded-2xl bg-card border border-card-border hover:border-primary/50 transition-all hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 overflow-hidden">
             <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
               <GraduationCap className="w-32 h-32" />
             </div>
@@ -46,15 +53,25 @@ export default function Landing() {
               <GraduationCap className="w-6 h-6" />
             </div>
             <h2 className="text-2xl font-semibold mb-2">I am a Student</h2>
-            <p className="text-muted-foreground mb-8 text-left text-balance">
+            <p className="text-muted-foreground mb-6 text-left text-balance">
               Access your subjects, notes, AI flashcards, and teacher feedback.
             </p>
-            <div className="mt-auto flex items-center text-primary font-medium group-hover:translate-x-1 transition-transform">
-              Student Portal <ArrowRight className="w-4 h-4 ml-1" />
+            <div className="flex gap-3 mt-auto">
+              <Link href="/student/signin">
+                <Button size="sm" className="gap-1.5">
+                  Sign In <ArrowRight className="w-3.5 h-3.5" />
+                </Button>
+              </Link>
+              <Link href="/student/request">
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <UserPlus className="w-3.5 h-3.5" /> Request Account
+                </Button>
+              </Link>
             </div>
-          </Link>
+          </div>
 
-          <Link href="/teacher/signin" className="group relative flex flex-col items-start p-8 rounded-2xl bg-card border border-card-border hover:border-primary/50 transition-all hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 overflow-hidden">
+          {/* Teacher card */}
+          <div className="group relative flex flex-col items-start p-8 rounded-2xl bg-card border border-card-border hover:border-primary/50 transition-all hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 overflow-hidden">
             <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
               <BookOpen className="w-32 h-32" />
             </div>
@@ -62,13 +79,22 @@ export default function Landing() {
               <BookOpen className="w-6 h-6" />
             </div>
             <h2 className="text-2xl font-semibold mb-2">I am a Teacher</h2>
-            <p className="text-muted-foreground mb-8 text-left text-balance">
+            <p className="text-muted-foreground mb-6 text-left text-balance">
               Manage files, evaluate student performance, and track progress.
             </p>
-            <div className="mt-auto flex items-center text-primary font-medium group-hover:translate-x-1 transition-transform">
-              Teacher Portal <ArrowRight className="w-4 h-4 ml-1" />
+            <div className="flex gap-3 mt-auto">
+              <Link href="/teacher/signin">
+                <Button size="sm" className="gap-1.5">
+                  Sign In <ArrowRight className="w-3.5 h-3.5" />
+                </Button>
+              </Link>
+              <Link href="/teacher/request">
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <UserPlus className="w-3.5 h-3.5" /> Request Access
+                </Button>
+              </Link>
             </div>
-          </Link>
+          </div>
         </div>
       </main>
     </div>

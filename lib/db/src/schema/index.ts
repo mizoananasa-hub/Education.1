@@ -6,3 +6,7 @@ export * from "./notes";
 export * from "./note_files";
 export * from "./homework";
 export * from "./notifications";
+export * from "./admins";
+export * from "./student_requests";
+export * from "./teacher_requests";
+export * from "./activity_logs";

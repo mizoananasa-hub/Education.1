@@ -1,0 +1,374 @@
+MAJOR SYSTEM UPGRADE — ADD COMPLETE ADMIN PANEL + APPROVAL-BASED ACCOUNT SYSTEM
+
+⚠️ IMPORTANT:
+
+* DO NOT rebuild the app
+* DO NOT remove existing dashboards
+* EXTEND the current architecture professionally
+* KEEP current styling/theme/animations
+
+Learnova should now function like a REAL school management platform.
+
+==================================================
+👑 NEW ROLE — ADMIN
+===================
+
+Add a COMPLETE Admin Dashboard.
+
+Admins control:
+
+* student approvals
+* teacher access
+* account generation
+* activity tracking
+* system management
+
+==================================================
+🔐 NEW AUTH STRUCTURE
+=====================
+
+ROLES:
+
+* admin
+* teacher
+* student
+
+==================================================
+👑 ADMIN AUTH
+=============
+
+Admins can login through:
+
+* dedicated admin login page
+
+Fields:
+
+* Admin username/email
+* Password
+
+Use:
+
+* JWT
+* bcrypt
+
+==================================================
+🎒 NEW STUDENT REGISTRATION FLOW
+================================
+
+Students should NO LONGER instantly create accounts.
+
+Instead:
+
+==================================================
+📝 STEP 1 — STUDENT REQUEST FORM
+================================
+
+Student submits REQUEST form:
+
+Fields:
+
+* Full Name
+* Grade
+* Religion
+* Optional parent phone/email
+
+When submitted:
+➡️ request goes to admin dashboard
+
+Student DOES NOT get account immediately.
+
+==================================================
+👑 STEP 2 — ADMIN APPROVES STUDENT
+==================================
+
+Admin sees:
+"Pending Student Requests"
+
+Admin can:
+
+* Approve
+* Reject
+
+==================================================
+✅ WHEN APPROVED
+===============
+
+System automatically generates:
+
+* Student Code
+* Temporary Password
+
+Example:
+STU-1042
+
+Password:
+Learnova2026
+
+Store in database.
+
+==================================================
+📨 STEP 3 — STUDENT RECEIVES ACCESS
+===================================
+
+After approval:
+Student can now login using:
+
+* student code
+* password
+
+OPTIONAL:
+Show approval screen/message:
+"Your request has been approved."
+
+==================================================
+👨‍🏫 TEACHER ACCESS SYSTEM
+===========================
+
+Teachers should ALSO require admin approval/access.
+
+==================================================
+📝 TEACHER REQUEST FORM
+=======================
+
+Fields:
+
+* Full Name
+* Subject
+* Optional email
+
+Teacher submits request.
+
+==================================================
+👑 ADMIN CONTROLS TEACHER ACCESS
+================================
+
+Admin can:
+
+* Approve teacher
+* Reject teacher
+* Assign teacher subject
+* Enable/disable teacher access
+
+==================================================
+✅ TEACHER LOGIN AFTER APPROVAL
+==============================
+
+Approved teachers can login using:
+
+* name
+* subject
+* subject password
+
+ONLY approved teachers may enter dashboards.
+
+==================================================
+🗄️ DATABASE UPDATES
+====================
+
+==================================================
+📘 student_requests
+===================
+
+Columns:
+
+* id
+* full_name
+* grade
+* religion
+* parent_contact
+* status
+* created_at
+
+==================================================
+👨‍🏫 teacher_requests
+======================
+
+Columns:
+
+* id
+* full_name
+* subject
+* email
+* status
+* created_at
+
+==================================================
+👑 admins
+=========
+
+Columns:
+
+* id
+* username
+* password_hash
+* created_at
+
+==================================================
+📊 activity_logs
+================
+
+Columns:
+
+* id
+* user_id
+* user_role
+* action
+* details
+* created_at
+
+==================================================
+📈 ADMIN DASHBOARD
+==================
+
+Admin sidebar tabs:
+
+1. Overview
+2. Student Requests
+3. Teacher Requests
+4. Students
+5. Teachers
+6. Activity Logs
+7. Notifications
+8. Settings
+
+==================================================
+📊 OVERVIEW PAGE
+================
+
+Show analytics cards:
+
+* Total students
+* Total teachers
+* Pending approvals
+* Homework submissions
+* Active users
+
+Use:
+
+* Charts
+* Progress cards
+* Activity timeline
+
+==================================================
+🧑‍🎓 STUDENTS MANAGEMENT
+=========================
+
+Admin can:
+
+* View all students
+* Search students
+* Disable accounts
+* Reset passwords
+* Change grades
+* Delete accounts
+
+==================================================
+👨‍🏫 TEACHERS MANAGEMENT
+=========================
+
+Admin can:
+
+* View all teachers
+* Enable/disable teacher access
+* Change teacher subjects
+* Remove teachers
+
+==================================================
+📊 ACTIVITY TRACKING SYSTEM
+===========================
+
+Track actions such as:
+
+STUDENTS:
+
+* login
+* homework submission
+* flashcard generation
+* quiz completion
+* file viewing
+
+TEACHERS:
+
+* login
+* file uploads
+* homework creation
+* ratings submitted
+
+ADMINS:
+
+* approvals
+* account changes
+* deletions
+
+==================================================
+📈 ACTIVITY LOG UI
+==================
+
+Show:
+
+* user
+* role
+* action
+* timestamp
+
+Use:
+
+* searchable table
+* filters
+* activity cards
+
+==================================================
+🔔 ADMIN NOTIFICATIONS
+======================
+
+Admin receives notifications for:
+
+* new student requests
+* new teacher requests
+* suspicious login attempts
+* system errors
+
+==================================================
+⚠️ IMPORTANT AUTH RULES
+=======================
+
+Students CANNOT access dashboards unless:
+
+* approved by admin
+
+Teachers CANNOT access dashboards unless:
+
+* approved by admin
+
+==================================================
+🎨 UI REQUIREMENTS
+==================
+
+Admin dashboard should feel:
+
+* premium
+* modern
+* enterprise-level
+
+Inspired by:
+
+* Notion admin systems
+* Supabase dashboard
+* modern SaaS admin panels
+
+NOT:
+
+* basic tables only
+* old-school admin templates
+
+==================================================
+⚠️ FINAL RULES
+==============
+
+* KEEP current Learnova design system
+* DO NOT break existing dashboards
+* EXTEND architecture professionally
+* USE REAL DATABASE TABLES
+* USE REAL ROLE-BASED AUTH
+
+Learnova should now feel like a REAL school operating system.

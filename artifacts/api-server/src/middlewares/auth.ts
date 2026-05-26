@@ -4,13 +4,14 @@ import jwt from "jsonwebtoken";
 const JWT_SECRET = process.env.SESSION_SECRET ?? "learnova-secret-key";
 
 export interface JwtPayload {
-  role: "student" | "teacher";
+  role: "student" | "teacher" | "admin";
   id?: number;
   fullName: string;
   studentCode?: string;
   grade?: number;
   religion?: string;
   subject?: string;
+  username?: string;
 }
 
 export function signToken(payload: JwtPayload): string {
@@ -53,6 +54,17 @@ export function requireTeacher(req: Request, res: Response, next: NextFunction):
     const user = (req as Request & { user: JwtPayload }).user;
     if (user.role !== "teacher") {
       res.status(403).json({ error: "Teachers only" });
+      return;
+    }
+    next();
+  });
+}
+
+export function requireAdmin(req: Request, res: Response, next: NextFunction): void {
+  requireAuth(req, res, () => {
+    const user = (req as Request & { user: JwtPayload }).user;
+    if (user.role !== "admin") {
+      res.status(403).json({ error: "Admins only" });
       return;
     }
     next();

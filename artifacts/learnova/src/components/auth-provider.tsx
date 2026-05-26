@@ -1,12 +1,20 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { useLocation } from "wouter";
-import { useGetMe, getGetMeQueryKey } from "@workspace/api-client-react";
-import { setToken, getToken } from "@/lib/auth";
+import { getToken, setToken } from "@/lib/auth";
 import { Spinner } from "./ui/spinner";
-import type { MeResponse } from "@workspace/api-client-react";
+
+export interface AuthUser {
+  id: number | null;
+  fullName: string;
+  studentCode: string | null;
+  grade: number | null;
+  religion: string | null;
+  subject: string | null;
+  role: "student" | "teacher" | "admin";
+}
 
 interface AuthContextType {
-  user: MeResponse | null;
+  user: AuthUser | null;
   isLoading: boolean;
   login: (token: string) => void;
   logout: () => void;
@@ -14,42 +22,49 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+async function fetchMe(token: string): Promise<AuthUser> {
+  const res = await fetch("/api/auth/me", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error("Unauthorized");
+  return res.json();
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [_, setLocation] = useLocation();
-  const [token, setTokenState] = useState<string | null>(getToken());
-
-  const {
-    data: user,
-    isFetching,
-    isLoading: isQueryLoading,
-    error,
-  } = useGetMe({
-    query: {
-      queryKey: getGetMeQueryKey(),
-      enabled: !!token,
-      retry: false,
-      staleTime: 5 * 60 * 1000,
-    },
-  });
-
-  // isLoading: true whenever token exists but user hasn't resolved yet (prevents premature redirects)
-  const isLoading = !!token && (isFetching || isQueryLoading || (!user && !error));
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    if (error && token) {
-      logout();
+    const token = getToken();
+    if (!token) {
+      setIsLoading(false);
+      return;
     }
-  }, [error]);
+    fetchMe(token)
+      .then(setUser)
+      .catch(() => {
+        setToken(null);
+        setUser(null);
+      })
+      .finally(() => setIsLoading(false));
+  }, []);
 
-  const login = (newToken: string) => {
-    setToken(newToken);
-    setTokenState(newToken);
-    // Enabled query will auto-fetch when token state changes
+  const login = (token: string) => {
+    setToken(token);
+    setIsLoading(true);
+    fetchMe(token)
+      .then(setUser)
+      .catch(() => {
+        setToken(null);
+        setUser(null);
+      })
+      .finally(() => setIsLoading(false));
   };
 
   const logout = () => {
     setToken(null);
-    setTokenState(null);
+    setUser(null);
     setLocation("/");
   };
 
@@ -62,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user: user || null, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
