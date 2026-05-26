@@ -1,9 +1,8 @@
 import { Router } from "express";
 import bcrypt from "bcrypt";
-import { db, studentsTable, adminsTable, studentRequestsTable, teacherRequestsTable, activityLogsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
-import { signToken, verifyToken } from "../middlewares/auth.js";
-import { requireAuth, requireAdmin } from "../middlewares/auth.js";
+import { db, studentsTable, adminsTable, teachersTable, teacherSubjectsTable, activityLogsTable } from "@workspace/db";
+import { eq, or } from "drizzle-orm";
+import { signToken, requireAuth } from "../middlewares/auth.js";
 import type { Request, Response } from "express";
 import type { JwtPayload } from "../middlewares/auth.js";
 
@@ -13,60 +12,38 @@ const router = Router();
 
 router.post("/auth/admin/signin", async (req: Request, res: Response): Promise<void> => {
   const { username, password } = req.body;
-
-  if (!username || !password) {
-    res.status(400).json({ error: "Username and password are required" });
-    return;
-  }
+  if (!username || !password) { res.status(400).json({ error: "Username and password are required" }); return; }
 
   const [admin] = await db.select().from(adminsTable).where(eq(adminsTable.username, username)).limit(1);
-  if (!admin) {
-    res.status(401).json({ error: "Invalid username or password" });
-    return;
-  }
-
-  const valid = await bcrypt.compare(password, admin.passwordHash);
-  if (!valid) {
+  if (!admin || !(await bcrypt.compare(password, admin.passwordHash))) {
     res.status(401).json({ error: "Invalid username or password" });
     return;
   }
 
   await db.insert(activityLogsTable).values({
-    userId: admin.id,
-    userRole: "admin",
-    userName: admin.username,
-    action: "login",
-    details: "Admin signed in",
+    userId: admin.id, userRole: "admin", userName: admin.username,
+    action: "login", details: "Admin signed in",
   });
 
-  const token = signToken({
-    role: "admin",
-    id: admin.id,
-    fullName: admin.username,
-    username: admin.username,
-  });
-
-  res.json({
-    token,
-    user: {
-      id: admin.id,
-      fullName: admin.username,
-      studentCode: null,
-      grade: null,
-      religion: null,
-      subject: null,
-      role: "admin",
-    },
-  });
+  const token = signToken({ role: "admin", id: admin.id, fullName: admin.username, username: admin.username });
+  res.json({ token, user: { id: admin.id, fullName: admin.username, studentCode: null, grade: null, religion: null, subject: null, role: "admin" } });
 });
 
-// ─── Student Request (replaces signup) ───────────────────────────────────────
+// ─── Student Signup (goes to pending) ────────────────────────────────────────
 
-router.post("/auth/student/request", async (req: Request, res: Response): Promise<void> => {
-  const { fullName, grade, religion, parentContact } = req.body;
+router.post("/auth/student/signup", async (req: Request, res: Response): Promise<void> => {
+  const { fullName, email, grade, religion, password, confirmPassword } = req.body;
 
-  if (!fullName || !grade || !religion) {
-    res.status(400).json({ error: "Full name, grade, and religion are required" });
+  if (!fullName || !grade || !religion || !password) {
+    res.status(400).json({ error: "Full name, grade, religion, and password are required" });
+    return;
+  }
+  if (password !== confirmPassword) {
+    res.status(400).json({ error: "Passwords do not match" });
+    return;
+  }
+  if (password.length < 6) {
+    res.status(400).json({ error: "Password must be at least 6 characters" });
     return;
   }
 
@@ -75,65 +52,70 @@ router.post("/auth/student/request", async (req: Request, res: Response): Promis
     res.status(400).json({ error: "Grade must be between 1 and 12" });
     return;
   }
-
   if (!["Islamic", "Christian"].includes(religion)) {
     res.status(400).json({ error: "Religion must be Islamic or Christian" });
     return;
   }
 
-  const [request] = await db.insert(studentRequestsTable).values({
-    fullName,
-    grade: String(gradeNum),
-    religion,
-    parentContact: parentContact || null,
-    status: "pending",
-  }).returning();
-
-  res.status(201).json({
-    message: "Your request has been submitted. Please wait for admin approval.",
-    requestId: request.id,
-  });
-});
-
-// ─── Teacher Request ──────────────────────────────────────────────────────────
-
-router.post("/auth/teacher/request", async (req: Request, res: Response): Promise<void> => {
-  const { fullName, subject, email } = req.body;
-
-  if (!fullName || !subject) {
-    res.status(400).json({ error: "Full name and subject are required" });
-    return;
+  // Check for duplicate email
+  if (email) {
+    const existing = await db.select().from(studentsTable).where(eq(studentsTable.email, email)).limit(1);
+    if (existing.length > 0) {
+      res.status(400).json({ error: "An account with this email already exists" });
+      return;
+    }
   }
 
-  const [request] = await db.insert(teacherRequestsTable).values({
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  // Auto-generate a temp student code (will be proper after approval)
+  const tempCode = `PENDING-${Date.now()}`;
+
+  await db.insert(studentsTable).values({
     fullName,
-    subject,
     email: email || null,
-    status: "pending",
-  }).returning();
+    studentCode: tempCode,
+    passwordHash,
+    grade: gradeNum,
+    religion,
+    accountStatus: "pending",
+    isActive: false,
+  });
 
   res.status(201).json({
-    message: "Your request has been submitted. Please wait for admin approval.",
-    requestId: request.id,
+    message: "Your account request has been submitted. You will be able to sign in once an admin approves your account.",
   });
 });
 
 // ─── Student Signin ───────────────────────────────────────────────────────────
 
 router.post("/auth/student/signin", async (req: Request, res: Response): Promise<void> => {
-  const { studentCode, password } = req.body;
+  const { identifier, password } = req.body;
 
-  if (!studentCode || !password) {
-    res.status(400).json({ error: "Student code and password are required" });
+  if (!identifier || !password) {
+    res.status(400).json({ error: "Student code or email, and password are required" });
     return;
   }
 
-  const [student] = await db.select().from(studentsTable).where(eq(studentsTable.studentCode, studentCode)).limit(1);
+  // Try student code first, then email
+  const results = await db.select().from(studentsTable).where(
+    or(eq(studentsTable.studentCode, identifier), eq(studentsTable.email, identifier))
+  ).limit(1);
+
+  const student = results[0];
   if (!student) {
-    res.status(401).json({ error: "Invalid student code or password" });
+    res.status(401).json({ error: "Invalid credentials" });
     return;
   }
 
+  if (student.accountStatus === "pending") {
+    res.status(403).json({ error: "Your account is waiting for admin approval." });
+    return;
+  }
+  if (student.accountStatus === "rejected") {
+    res.status(403).json({ error: "Your account request was rejected. Please contact the administrator." });
+    return;
+  }
   if (!student.isActive) {
     res.status(403).json({ error: "Your account has been disabled. Contact the administrator." });
     return;
@@ -141,100 +123,119 @@ router.post("/auth/student/signin", async (req: Request, res: Response): Promise
 
   const valid = await bcrypt.compare(password, student.passwordHash);
   if (!valid) {
-    res.status(401).json({ error: "Invalid student code or password" });
+    res.status(401).json({ error: "Invalid credentials" });
     return;
   }
 
   await db.insert(activityLogsTable).values({
-    userId: student.id,
-    userRole: "student",
-    userName: student.fullName,
-    action: "login",
-    details: `Student ${student.studentCode} signed in`,
+    userId: student.id, userRole: "student", userName: student.fullName,
+    action: "login", details: `Student ${student.studentCode} signed in`,
   });
 
   const token = signToken({
-    role: "student",
-    id: student.id,
-    fullName: student.fullName,
-    studentCode: student.studentCode,
-    grade: student.grade,
-    religion: student.religion,
+    role: "student", id: student.id, fullName: student.fullName,
+    studentCode: student.studentCode, grade: student.grade, religion: student.religion,
   });
 
   res.json({
     token,
-    user: {
-      id: student.id,
-      fullName: student.fullName,
-      studentCode: student.studentCode,
-      grade: student.grade,
-      religion: student.religion,
-      subject: null,
-      role: "student",
-    },
+    user: { id: student.id, fullName: student.fullName, studentCode: student.studentCode, grade: student.grade, religion: student.religion, subject: null, role: "student" },
+  });
+});
+
+// ─── Teacher Signup (goes to pending) ────────────────────────────────────────
+
+router.post("/auth/teacher/signup", async (req: Request, res: Response): Promise<void> => {
+  const { fullName, email, password, confirmPassword } = req.body;
+
+  if (!fullName || !email || !password) {
+    res.status(400).json({ error: "Full name, email, and password are required" });
+    return;
+  }
+  if (password !== confirmPassword) {
+    res.status(400).json({ error: "Passwords do not match" });
+    return;
+  }
+  if (password.length < 6) {
+    res.status(400).json({ error: "Password must be at least 6 characters" });
+    return;
+  }
+
+  const existing = await db.select().from(teachersTable).where(eq(teachersTable.email, email)).limit(1);
+  if (existing.length > 0) {
+    res.status(400).json({ error: "An account with this email already exists" });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  await db.insert(teachersTable).values({
+    fullName, email, passwordHash,
+    accountStatus: "pending",
+    isActive: false,
+  });
+
+  res.status(201).json({
+    message: "Your account request has been submitted. You will be able to sign in once an admin approves your account and assigns your subjects.",
   });
 });
 
 // ─── Teacher Signin ───────────────────────────────────────────────────────────
 
 router.post("/auth/teacher/signin", async (req: Request, res: Response): Promise<void> => {
-  const { fullName, subject, subjectPassword } = req.body;
+  const { identifier, password } = req.body;
 
-  if (!fullName || !subject || !subjectPassword) {
-    res.status(400).json({ error: "All fields are required" });
+  if (!identifier || !password) {
+    res.status(400).json({ error: "Email and password are required" });
     return;
   }
 
-  // Check if teacher is approved in DB
-  const approvedTeacher = await db
-    .select()
-    .from(teacherRequestsTable)
-    .where(eq(teacherRequestsTable.fullName, fullName))
-    .limit(1);
+  const results = await db.select().from(teachersTable).where(
+    or(eq(teachersTable.email, identifier), eq(teachersTable.fullName, identifier))
+  ).limit(1);
 
-  const teacherRecord = approvedTeacher.find(
-    (t) => t.subject === subject && t.status === "approved"
-  );
-
-  if (!teacherRecord) {
-    res.status(401).json({ error: "Teacher not found or not yet approved. Please submit a request or contact admin." });
+  const teacher = results[0];
+  if (!teacher) {
+    res.status(401).json({ error: "Invalid credentials" });
     return;
   }
 
-  // Verify subject password stored in teacher record (set by admin on approval)
-  const validPassword = await bcrypt.compare(subjectPassword, (teacherRecord as any).passwordHash ?? "");
-  if (!validPassword) {
-    res.status(401).json({ error: "Invalid password" });
+  if (teacher.accountStatus === "pending") {
+    res.status(403).json({ error: "Your account is waiting for admin approval." });
     return;
   }
+  if (teacher.accountStatus === "rejected") {
+    res.status(403).json({ error: "Your account request was rejected. Please contact the administrator." });
+    return;
+  }
+  if (!teacher.isActive) {
+    res.status(403).json({ error: "Your account has been disabled. Contact the administrator." });
+    return;
+  }
+
+  const valid = await bcrypt.compare(password, teacher.passwordHash);
+  if (!valid) {
+    res.status(401).json({ error: "Invalid credentials" });
+    return;
+  }
+
+  // Get assigned subjects
+  const subjects = await db.select().from(teacherSubjectsTable).where(eq(teacherSubjectsTable.teacherId, teacher.id));
+  const subjectList = subjects.map((s) => s.subjectName);
 
   await db.insert(activityLogsTable).values({
-    userId: teacherRecord.id,
-    userRole: "teacher",
-    userName: fullName,
-    action: "login",
-    details: `Teacher ${fullName} (${subject}) signed in`,
+    userId: teacher.id, userRole: "teacher", userName: teacher.fullName,
+    action: "login", details: `Teacher ${teacher.fullName} signed in`,
   });
 
   const token = signToken({
-    role: "teacher",
-    id: teacherRecord.id,
-    fullName,
-    subject,
+    role: "teacher", id: teacher.id, fullName: teacher.fullName,
+    subject: subjectList[0] ?? "Unassigned",
   });
 
   res.json({
     token,
-    user: {
-      id: teacherRecord.id,
-      fullName,
-      studentCode: null,
-      grade: null,
-      religion: null,
-      subject,
-      role: "teacher",
-    },
+    user: { id: teacher.id, fullName: teacher.fullName, studentCode: null, grade: null, religion: null, subject: subjectList[0] ?? "Unassigned", subjects: subjectList, role: "teacher" },
   });
 });
 
@@ -242,44 +243,42 @@ router.post("/auth/teacher/signin", async (req: Request, res: Response): Promise
 
 router.patch("/auth/password", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const user = (req as Request & { user: JwtPayload }).user;
-
-  if (user.role !== "student") {
-    res.status(403).json({ error: "Only students can change their password" });
-    return;
-  }
-
   const { currentPassword, newPassword } = req.body;
-  if (!currentPassword || !newPassword) {
-    res.status(400).json({ error: "Current and new passwords are required" });
-    return;
-  }
-  if (newPassword.length < 6) {
-    res.status(400).json({ error: "New password must be at least 6 characters" });
-    return;
-  }
 
-  const [student] = await db.select().from(studentsTable).where(eq(studentsTable.id, user.id!)).limit(1);
-  if (!student) {
-    res.status(404).json({ error: "Student not found" });
-    return;
-  }
+  if (!currentPassword || !newPassword) { res.status(400).json({ error: "Current and new passwords are required" }); return; }
+  if (newPassword.length < 6) { res.status(400).json({ error: "New password must be at least 6 characters" }); return; }
 
-  const valid = await bcrypt.compare(currentPassword, student.passwordHash);
-  if (!valid) {
-    res.status(401).json({ error: "Current password is incorrect" });
-    return;
+  if (user.role === "student") {
+    const [student] = await db.select().from(studentsTable).where(eq(studentsTable.id, user.id!)).limit(1);
+    if (!student || !(await bcrypt.compare(currentPassword, student.passwordHash))) {
+      res.status(401).json({ error: "Current password is incorrect" }); return;
+    }
+    await db.update(studentsTable).set({ passwordHash: await bcrypt.hash(newPassword, 12) }).where(eq(studentsTable.id, student.id));
+  } else if (user.role === "teacher") {
+    const [teacher] = await db.select().from(teachersTable).where(eq(teachersTable.id, user.id!)).limit(1);
+    if (!teacher || !(await bcrypt.compare(currentPassword, teacher.passwordHash))) {
+      res.status(401).json({ error: "Current password is incorrect" }); return;
+    }
+    await db.update(teachersTable).set({ passwordHash: await bcrypt.hash(newPassword, 12) }).where(eq(teachersTable.id, teacher.id));
+  } else {
+    res.status(403).json({ error: "Password change not supported for this role" }); return;
   }
-
-  const newHash = await bcrypt.hash(newPassword, 12);
-  await db.update(studentsTable).set({ passwordHash: newHash }).where(eq(studentsTable.id, student.id));
 
   res.json({ message: "Password updated successfully" });
 });
 
 // ─── Me ───────────────────────────────────────────────────────────────────────
 
-router.get("/auth/me", requireAuth, (req: Request, res: Response): void => {
+router.get("/auth/me", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const user = (req as Request & { user: JwtPayload }).user;
+
+  if (user.role === "teacher" && user.id) {
+    const subjects = await db.select().from(teacherSubjectsTable).where(eq(teacherSubjectsTable.teacherId, user.id));
+    const subjectList = subjects.map((s) => s.subjectName);
+    res.json({ id: user.id, fullName: user.fullName, studentCode: null, grade: null, religion: null, subject: subjectList[0] ?? "Unassigned", subjects: subjectList, role: user.role });
+    return;
+  }
+
   res.json({
     id: user.id ?? null,
     fullName: user.fullName,

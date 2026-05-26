@@ -62,9 +62,9 @@ export default function Landing() {
                   Sign In <ArrowRight className="w-3.5 h-3.5" />
                 </Button>
               </Link>
-              <Link href="/student/request">
+              <Link href="/student/signup">
                 <Button variant="outline" size="sm" className="gap-1.5">
-                  <UserPlus className="w-3.5 h-3.5" /> Request Account
+                  <UserPlus className="w-3.5 h-3.5" /> Create Account
                 </Button>
               </Link>
             </div>
@@ -88,9 +88,9 @@ export default function Landing() {
                   Sign In <ArrowRight className="w-3.5 h-3.5" />
                 </Button>
               </Link>
-              <Link href="/teacher/request">
+              <Link href="/teacher/signup">
                 <Button variant="outline" size="sm" className="gap-1.5">
-                  <UserPlus className="w-3.5 h-3.5" /> Request Access
+                  <UserPlus className="w-3.5 h-3.5" /> Create Account
                 </Button>
               </Link>
             </div>

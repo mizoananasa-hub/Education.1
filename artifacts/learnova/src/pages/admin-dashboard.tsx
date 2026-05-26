@@ -12,7 +12,7 @@ import {
   Activity, LogOut, GraduationCap, Shield,
   CheckCircle2, XCircle, RefreshCw, Trash2,
   ToggleLeft, ToggleRight, ChevronRight, Loader2,
-  AlertTriangle, Eye, EyeOff, Pencil, UserCheck,
+  AlertTriangle, Pencil, UserCheck,
   UserX, Clock, TrendingUp
 } from "lucide-react";
 import {
@@ -33,19 +33,18 @@ interface OverviewData {
 interface StudentRequest {
   id: number;
   fullName: string;
-  grade: string;
+  email: string | null;
+  grade: number;
   religion: string;
-  parentContact: string | null;
-  status: string;
+  accountStatus: string;
   createdAt: string;
 }
 
 interface TeacherRequest {
   id: number;
   fullName: string;
-  subject: string;
-  email: string | null;
-  status: string;
+  email: string;
+  accountStatus: string;
   createdAt: string;
 }
 
@@ -62,9 +61,10 @@ interface Student {
 interface Teacher {
   id: number;
   fullName: string;
-  subject: string;
-  email: string | null;
-  status: string;
+  email: string;
+  subjects: string[];
+  accountStatus: string;
+  isActive: boolean;
   createdAt: string;
 }
 
@@ -167,7 +167,7 @@ function OverviewTab() {
 function StudentRequestsTab() {
   const qc = useQueryClient();
   const { toast } = useToast();
-  const [approvedInfo, setApprovedInfo] = useState<{ code: string; pass: string } | null>(null);
+  const [approvedCode, setApprovedCode] = useState<string | null>(null);
 
   const { data = [], isLoading } = useQuery<StudentRequest[]>({
     queryKey: ["admin", "student-requests"],
@@ -178,55 +178,46 @@ function StudentRequestsTab() {
     mutationFn: (id: number) => apiFetch(`/api/admin/student-requests/${id}/approve`, { method: "POST" }),
     onSuccess: (res: any) => {
       qc.invalidateQueries({ queryKey: ["admin"] });
-      setApprovedInfo({ code: res.studentCode, pass: res.tempPassword });
+      setApprovedCode(res.studentCode);
+      toast({ title: "Student approved", description: `Student code: ${res.studentCode}` });
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const rejectMut = useMutation({
     mutationFn: (id: number) => apiFetch(`/api/admin/student-requests/${id}/reject`, { method: "POST" }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin"] }); toast({ title: "Rejected" }); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin"] }); toast({ title: "Request rejected" }); },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   if (isLoading) return <LoadingState />;
 
-  const pending = data.filter((r) => r.status === "pending");
-  const processed = data.filter((r) => r.status !== "pending");
-
   return (
     <div className="space-y-8">
-      <SectionHeader title="Student Enrollment Requests" count={pending.length} label="pending" />
+      <SectionHeader title="Student Signup Requests" count={data.length} label="pending" />
+      <p className="text-sm text-muted-foreground -mt-4">Students who signed up and are waiting for approval. Once approved, they can sign in with their own password.</p>
 
-      {approvedInfo && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-6">
-          <div className="flex items-center gap-2 text-green-700 font-semibold mb-3">
+      {approvedCode && (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-5">
+          <div className="flex items-center gap-2 text-green-700 font-semibold mb-2">
             <CheckCircle2 className="w-5 h-5" /> Student Approved!
           </div>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-muted-foreground mb-1">Student Code</p>
-              <p className="font-mono font-bold text-lg">{approvedInfo.code}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground mb-1">Temp Password</p>
-              <p className="font-mono font-bold text-lg">{approvedInfo.pass}</p>
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground mt-3">Share these credentials with the student. They can change their password after signing in.</p>
-          <Button variant="outline" size="sm" className="mt-3" onClick={() => setApprovedInfo(null)}>Dismiss</Button>
+          <p className="text-sm text-muted-foreground mb-1">Student code assigned:</p>
+          <p className="font-mono font-bold text-xl">{approvedCode}</p>
+          <p className="text-xs text-muted-foreground mt-2">The student uses their own password (set during signup) to sign in.</p>
+          <Button variant="outline" size="sm" className="mt-3" onClick={() => setApprovedCode(null)}>Dismiss</Button>
         </div>
       )}
 
-      {pending.length === 0 ? (
-        <EmptyState message="No pending requests" icon={<CheckCircle2 className="w-8 h-8 text-green-500" />} />
+      {data.length === 0 ? (
+        <EmptyState message="No pending student requests" icon={<CheckCircle2 className="w-8 h-8 text-green-500" />} />
       ) : (
         <div className="space-y-3">
-          {pending.map((r) => (
+          {data.map((r) => (
             <RequestCard
               key={r.id}
               name={r.fullName}
-              meta={`Grade ${r.grade} · ${r.religion}${r.parentContact ? ` · ${r.parentContact}` : ""}`}
+              meta={`Grade ${r.grade} · ${r.religion}${r.email ? ` · ${r.email}` : ""}`}
               date={r.createdAt}
               onApprove={() => approveMut.mutate(r.id)}
               onReject={() => rejectMut.mutate(r.id)}
@@ -235,35 +226,22 @@ function StudentRequestsTab() {
           ))}
         </div>
       )}
-
-      {processed.length > 0 && (
-        <>
-          <h3 className="text-base font-semibold text-muted-foreground">Processed</h3>
-          <div className="space-y-2">
-            {processed.map((r) => (
-              <div key={r.id} className="flex items-center gap-4 bg-card border border-card-border rounded-xl p-4">
-                <div className="flex-1">
-                  <p className="font-medium">{r.fullName}</p>
-                  <p className="text-sm text-muted-foreground">Grade {r.grade} · {r.religion} · {fmt(r.createdAt)}</p>
-                </div>
-                {statusBadge(r.status)}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
     </div>
   );
 }
 
 // ─── Teacher Requests Tab ─────────────────────────────────────────────────────
 
+const SUBJECTS = [
+  "Mathematics", "French", "English", "Arabic", "ICT", "Science",
+  "Social Studies", "Islamic Revision", "Christian Religion", "Biology", "Physics", "Chemistry",
+];
+
 function TeacherRequestsTab() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [approveId, setApproveId] = useState<number | null>(null);
-  const [subjectPassword, setSubjectPassword] = useState("");
-  const [showPass, setShowPass] = useState(false);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
 
   const { data = [], isLoading } = useQuery<TeacherRequest[]>({
     queryKey: ["admin", "teacher-requests"],
@@ -271,12 +249,12 @@ function TeacherRequestsTab() {
   });
 
   const approveMut = useMutation({
-    mutationFn: ({ id, password }: { id: number; password: string }) =>
-      apiFetch(`/api/admin/teacher-requests/${id}/approve`, { method: "POST", body: JSON.stringify({ subjectPassword: password }) }),
+    mutationFn: ({ id, subjects }: { id: number; subjects: string[] }) =>
+      apiFetch(`/api/admin/teacher-requests/${id}/approve`, { method: "POST", body: JSON.stringify({ subjects }) }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin"] });
       setApproveId(null);
-      setSubjectPassword("");
+      setSelectedSubjects([]);
       toast({ title: "Teacher approved successfully" });
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
@@ -284,37 +262,38 @@ function TeacherRequestsTab() {
 
   const rejectMut = useMutation({
     mutationFn: (id: number) => apiFetch(`/api/admin/teacher-requests/${id}/reject`, { method: "POST" }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin"] }); toast({ title: "Rejected" }); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin"] }); toast({ title: "Request rejected" }); },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   if (isLoading) return <LoadingState />;
 
-  const pending = data.filter((r) => r.status === "pending");
-  const processed = data.filter((r) => r.status !== "pending");
+  const toggleSubject = (s: string) =>
+    setSelectedSubjects((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]);
 
   return (
     <div className="space-y-8">
-      <SectionHeader title="Teacher Access Requests" count={pending.length} label="pending" />
+      <SectionHeader title="Teacher Signup Requests" count={data.length} label="pending" />
+      <p className="text-sm text-muted-foreground -mt-4">Teachers who applied for an account. Approve and optionally assign subjects immediately, or assign them later.</p>
 
-      {pending.length === 0 ? (
+      {data.length === 0 ? (
         <EmptyState message="No pending teacher requests" icon={<CheckCircle2 className="w-8 h-8 text-green-500" />} />
       ) : (
         <div className="space-y-3">
-          {pending.map((r) => (
+          {data.map((r) => (
             <div key={r.id} className="bg-card border border-card-border rounded-xl p-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="font-semibold">{r.fullName}</p>
-                  <p className="text-sm text-muted-foreground">{r.subject}{r.email ? ` · ${r.email}` : ""} · {fmt(r.createdAt)}</p>
+                  <p className="text-sm text-muted-foreground">{r.email} · {fmt(r.createdAt)}</p>
                 </div>
-                {statusBadge(r.status)}
+                <Badge className="bg-amber-100 text-amber-700 border-amber-200">Pending</Badge>
               </div>
               <div className="flex gap-2 mt-4">
-                <Button size="sm" onClick={() => setApproveId(r.id)} className="gap-1.5 bg-green-600 hover:bg-green-700">
+                <Button size="sm" onClick={() => { setApproveId(r.id); setSelectedSubjects([]); }} className="gap-1.5 bg-green-600 hover:bg-green-700">
                   <CheckCircle2 className="w-4 h-4" /> Approve
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => rejectMut.mutate(r.id)} className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/5">
+                <Button size="sm" variant="outline" onClick={() => rejectMut.mutate(r.id)} className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/5" disabled={rejectMut.isPending}>
                   <XCircle className="w-4 h-4" /> Reject
                 </Button>
               </div>
@@ -323,57 +302,47 @@ function TeacherRequestsTab() {
         </div>
       )}
 
-      {processed.length > 0 && (
-        <>
-          <h3 className="text-base font-semibold text-muted-foreground">Processed</h3>
-          <div className="space-y-2">
-            {processed.map((r) => (
-              <div key={r.id} className="flex items-center gap-4 bg-card border border-card-border rounded-xl p-4">
-                <div className="flex-1">
-                  <p className="font-medium">{r.fullName}</p>
-                  <p className="text-sm text-muted-foreground">{r.subject}{r.email ? ` · ${r.email}` : ""} · {fmt(r.createdAt)}</p>
-                </div>
-                {statusBadge(r.status)}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* Approve dialog with password */}
+      {/* Approve dialog with optional subject assignment */}
       <Dialog open={approveId !== null} onOpenChange={(o) => !o && setApproveId(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Set Teacher Password</DialogTitle>
+            <DialogTitle>Approve Teacher</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Set the subject login password for this teacher. They'll use this to sign in along with their name and subject.
+            Optionally assign subjects now. You can always add or change subjects later from the Teachers tab.
           </p>
-          <div className="relative mt-2">
-            <Input
-              type={showPass ? "text" : "password"}
-              placeholder="Enter a strong password…"
-              value={subjectPassword}
-              onChange={(e) => setSubjectPassword(e.target.value)}
-              className="pr-10"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPass(!showPass)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
+          <div className="mt-3">
+            <p className="text-sm font-medium mb-2">Assign Subjects <span className="text-muted-foreground font-normal">(optional)</span></p>
+            <div className="flex flex-wrap gap-2">
+              {SUBJECTS.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => toggleSubject(s)}
+                  className={cn(
+                    "text-xs px-3 py-1.5 rounded-full border transition-colors",
+                    selectedSubjects.includes(s)
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background text-muted-foreground border-border hover:border-primary/50"
+                  )}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+            {selectedSubjects.length > 0 && (
+              <p className="text-xs text-primary mt-2">{selectedSubjects.length} subject{selectedSubjects.length > 1 ? "s" : ""} selected</p>
+            )}
           </div>
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setApproveId(null)}>Cancel</Button>
             <Button
               className="bg-green-600 hover:bg-green-700"
-              disabled={!subjectPassword.trim() || approveMut.isPending}
-              onClick={() => approveId && approveMut.mutate({ id: approveId, password: subjectPassword })}
+              disabled={approveMut.isPending}
+              onClick={() => approveId && approveMut.mutate({ id: approveId, subjects: selectedSubjects })}
             >
               {approveMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Approve & Set Password
+              Approve
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -520,8 +489,8 @@ function StudentsTab() {
 function TeachersTab() {
   const qc = useQueryClient();
   const { toast } = useToast();
-  const [editSubjectId, setEditSubjectId] = useState<number | null>(null);
-  const [newSubject, setNewSubject] = useState("");
+  const [editSubjectsId, setEditSubjectsId] = useState<number | null>(null);
+  const [editSubjectsList, setEditSubjectsList] = useState<string[]>([]);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
   const { data = [], isLoading } = useQuery<Teacher[]>({
@@ -531,14 +500,14 @@ function TeachersTab() {
 
   const toggleMut = useMutation({
     mutationFn: (id: number) => apiFetch(`/api/admin/teachers/${id}/toggle-active`, { method: "PATCH" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "teachers"] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin", "teachers"] }); toast({ title: "Status updated" }); },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  const subjectMut = useMutation({
-    mutationFn: ({ id, subject }: { id: number; subject: string }) =>
-      apiFetch(`/api/admin/teachers/${id}/subject`, { method: "PATCH", body: JSON.stringify({ subject }) }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin", "teachers"] }); setEditSubjectId(null); toast({ title: "Subject updated" }); },
+  const subjectsMut = useMutation({
+    mutationFn: ({ id, subjects }: { id: number; subjects: string[] }) =>
+      apiFetch(`/api/admin/teachers/${id}/subjects`, { method: "PUT", body: JSON.stringify({ subjects }) }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin", "teachers"] }); setEditSubjectsId(null); toast({ title: "Subjects updated" }); },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
@@ -550,37 +519,49 @@ function TeachersTab() {
 
   if (isLoading) return <LoadingState />;
 
+  const toggleEditSubject = (s: string) =>
+    setEditSubjectsList((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]);
+
   return (
     <div className="space-y-6">
       <SectionHeader title="Active Teachers" count={data.length} label="total" />
 
-      {data.length === 0 ? <EmptyState message="No active teachers. Approve teacher requests to add them." /> : (
-        <div className="space-y-2">
+      {data.length === 0 ? <EmptyState message="No active teachers yet. Approve teacher requests to add them." /> : (
+        <div className="space-y-3">
           {data.map((t) => (
             <div key={t.id} className="bg-card border border-card-border rounded-xl p-4">
               <div className="flex flex-wrap items-start gap-4 justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
                     <p className="font-semibold">{t.fullName}</p>
-                    <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs">{t.subject}</Badge>
-                    {t.status === "approved"
+                    {t.isActive
                       ? <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">Active</Badge>
                       : <Badge className="bg-red-100 text-red-700 border-red-200 text-xs">Disabled</Badge>
                     }
                   </div>
-                  <p className="text-sm text-muted-foreground mt-0.5">{t.email || "No email"} · Approved {fmt(t.createdAt)}</p>
+                  <p className="text-sm text-muted-foreground mb-2">{t.email} · Joined {fmt(t.createdAt)}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {t.subjects.length > 0
+                      ? t.subjects.map((s) => <Badge key={s} className="bg-blue-100 text-blue-700 border-blue-200 text-xs">{s}</Badge>)
+                      : <span className="text-xs text-muted-foreground italic">No subjects assigned</span>
+                    }
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" onClick={() => { setEditSubjectId(t.id); setNewSubject(t.subject); }} className="gap-1.5 text-xs h-8">
-                    <Pencil className="w-3.5 h-3.5" /> Subject
+                  <Button
+                    size="sm" variant="outline"
+                    onClick={() => { setEditSubjectsId(t.id); setEditSubjectsList([...t.subjects]); }}
+                    className="gap-1.5 text-xs h-8"
+                  >
+                    <Pencil className="w-3.5 h-3.5" /> Subjects
                   </Button>
                   <Button
                     size="sm" variant="outline"
                     onClick={() => toggleMut.mutate(t.id)}
-                    className={cn("gap-1.5 text-xs h-8", t.status === "approved" ? "text-orange-600 border-orange-300 hover:bg-orange-50" : "text-green-600 border-green-300 hover:bg-green-50")}
+                    className={cn("gap-1.5 text-xs h-8", t.isActive ? "text-orange-600 border-orange-300 hover:bg-orange-50" : "text-green-600 border-green-300 hover:bg-green-50")}
                     disabled={toggleMut.isPending}
                   >
-                    {t.status === "approved" ? <><UserX className="w-3.5 h-3.5" /> Disable</> : <><UserCheck className="w-3.5 h-3.5" /> Enable</>}
+                    {t.isActive ? <><UserX className="w-3.5 h-3.5" /> Disable</> : <><UserCheck className="w-3.5 h-3.5" /> Enable</>}
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => setDeleteId(t.id)} className="gap-1.5 text-xs h-8 text-destructive border-destructive/30 hover:bg-destructive/5">
                     <Trash2 className="w-3.5 h-3.5" /> Remove
@@ -592,14 +573,38 @@ function TeachersTab() {
         </div>
       )}
 
-      <Dialog open={editSubjectId !== null} onOpenChange={(o) => !o && setEditSubjectId(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Change Subject</DialogTitle></DialogHeader>
-          <Input value={newSubject} onChange={(e) => setNewSubject(e.target.value)} placeholder="Subject name…" />
+      {/* Subject assignment dialog */}
+      <Dialog open={editSubjectsId !== null} onOpenChange={(o) => !o && setEditSubjectsId(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Assign Subjects</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Select all subjects this teacher can access. This replaces any existing assignment.</p>
+          <div className="flex flex-wrap gap-2 mt-3">
+            {SUBJECTS.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => toggleEditSubject(s)}
+                className={cn(
+                  "text-xs px-3 py-1.5 rounded-full border transition-colors",
+                  editSubjectsList.includes(s)
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-muted-foreground border-border hover:border-primary/50"
+                )}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+          {editSubjectsList.length > 0 && (
+            <p className="text-xs text-primary mt-2">{editSubjectsList.length} subject{editSubjectsList.length > 1 ? "s" : ""} selected</p>
+          )}
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setEditSubjectId(null)}>Cancel</Button>
-            <Button disabled={!newSubject.trim() || subjectMut.isPending} onClick={() => editSubjectId && subjectMut.mutate({ id: editSubjectId, subject: newSubject })}>
-              {subjectMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null} Save
+            <Button variant="outline" onClick={() => setEditSubjectsId(null)}>Cancel</Button>
+            <Button
+              disabled={subjectsMut.isPending}
+              onClick={() => editSubjectsId && subjectsMut.mutate({ id: editSubjectsId, subjects: editSubjectsList })}
+            >
+              {subjectsMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null} Save Subjects
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -608,7 +613,7 @@ function TeachersTab() {
       <Dialog open={deleteId !== null} onOpenChange={(o) => !o && setDeleteId(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle className="text-destructive flex items-center gap-2"><AlertTriangle className="w-5 h-5" /> Remove Teacher</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">This will remove the teacher's access. They can re-apply with a new request.</p>
+          <p className="text-sm text-muted-foreground">This will permanently remove the teacher's account and all assigned subjects.</p>
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
             <Button variant="destructive" disabled={deleteMut.isPending} onClick={() => deleteId && deleteMut.mutate(deleteId)}>

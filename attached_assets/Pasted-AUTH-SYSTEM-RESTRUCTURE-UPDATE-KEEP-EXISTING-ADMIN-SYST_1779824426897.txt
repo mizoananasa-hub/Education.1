@@ -1,0 +1,280 @@
+AUTH SYSTEM RESTRUCTURE UPDATE — KEEP EXISTING ADMIN SYSTEM
+
+⚠️ IMPORTANT:
+
+* DO NOT rebuild the admin dashboard
+* DO NOT recreate the admin system
+* ONLY modify the authentication and approval logic
+* KEEP existing dashboards and UI
+
+The admin system already exists.
+This update should EXTEND it, not replace it.
+
+==================================================
+🔥 NEW AUTHENTICATION STRUCTURE
+===============================
+
+Students and teachers should now sign in using NORMAL account credentials.
+
+REMOVE:
+
+* subject password system
+* hardcoded subject passwords
+* subject password DB validation
+
+Teachers should NO LONGER log in using:
+
+* subject + subject password
+
+==================================================
+✅ NEW TEACHER LOGIN
+===================
+
+Teacher login fields:
+
+* Email OR Username
+* Password
+
+Use:
+
+* bcrypt hashed passwords
+* JWT auth
+
+==================================================
+✅ NEW STUDENT LOGIN
+===================
+
+Student login fields:
+
+* Student Code OR Email
+* Password
+
+Use:
+
+* bcrypt hashed passwords
+* JWT auth
+
+==================================================
+📝 SIGNUP SYSTEM WITH APPROVALS
+===============================
+
+Users can SIGN UP normally.
+
+BUT:
+accounts are NOT immediately active.
+
+==================================================
+🎒 STUDENT SIGNUP FLOW
+======================
+
+Student submits signup form:
+
+Fields:
+
+* Full Name
+* Email (optional)
+* Grade
+* Religion
+* Password
+* Confirm Password
+
+After signup:
+➡️ account status = pending
+
+Student CANNOT access dashboard until approved by admin.
+
+==================================================
+👨‍🏫 TEACHER SIGNUP FLOW
+=========================
+
+Teacher submits signup form:
+
+Fields:
+
+* Full Name
+* Email
+* Password
+* Confirm Password
+
+After signup:
+➡️ account status = pending
+
+Teacher CANNOT access dashboard until approved by admin.
+
+==================================================
+👑 ADMIN APPROVAL SYSTEM (KEEP EXISTING ADMIN PAGE)
+===================================================
+
+DO NOT rebuild admin pages.
+
+ONLY extend existing admin functionality.
+
+==================================================
+✅ ADMIN CAN NOW:
+================
+
+For STUDENTS:
+
+* approve/reject accounts
+* activate/deactivate accounts
+
+For TEACHERS:
+
+* approve/reject accounts
+* assign subjects
+* enable/disable subject access
+
+==================================================
+🔥 NEW TEACHER SUBJECT ACCESS SYSTEM
+====================================
+
+THIS REPLACES SUBJECT PASSWORDS COMPLETELY.
+
+Admin chooses WHICH SUBJECTS a teacher can access.
+
+Example:
+
+Teacher:
+Mr Ahmed
+
+Allowed subjects:
+
+* Mathematics
+* Physics
+
+Blocked subjects:
+
+* Chemistry
+* Biology
+
+==================================================
+✅ TEACHER ACCESS RULES
+======================
+
+Teacher can ONLY:
+
+* upload files
+* create homework
+* rate students
+* manage content
+
+FOR subjects assigned by admin.
+
+==================================================
+🗄️ DATABASE UPDATES
+====================
+
+==================================================
+📘 students
+===========
+
+Add:
+
+* email
+* account_status
+
+Possible statuses:
+
+* pending
+* approved
+* rejected
+
+==================================================
+👨‍🏫 teachers
+==============
+
+Add:
+
+* email
+* password_hash
+* account_status
+
+Possible statuses:
+
+* pending
+* approved
+* rejected
+
+==================================================
+👨‍🏫 teacher_subjects
+======================
+
+NEW TABLE:
+
+Columns:
+
+* id
+* teacher_id
+* subject_name
+* created_at
+
+==================================================
+❌ REMOVE OLD SYSTEM
+===================
+
+Remove:
+
+* subject_passwords table usage
+* subject password validation
+* hardcoded subject passwords
+
+The system should now use:
+
+* real teacher accounts
+* real passwords
+* admin-controlled permissions
+
+==================================================
+🔐 LOGIN ACCESS RULES
+=====================
+
+If account_status != approved:
+
+BLOCK LOGIN.
+
+Show friendly message:
+
+"Your account is waiting for admin approval."
+
+==================================================
+👑 ADMIN TEACHER MANAGEMENT
+===========================
+
+In existing admin teacher management page:
+
+Add:
+"Assigned Subjects"
+
+Use:
+
+* multi-select dropdown
+  OR
+* checkbox subject list
+
+Admin can:
+
+* add/remove teacher subject access dynamically
+
+==================================================
+🎯 FINAL RESULT
+===============
+
+Students:
+
+* sign up normally
+* wait for approval
+* then login normally
+
+Teachers:
+
+* sign up normally
+* wait for approval
+* admin assigns subjects
+* teacher logs in normally
+
+Admin:
+
+* fully controls subject accessibility
+* fully controls approvals
+
+Learnova now behaves like a REAL school platform instead of a shared-password system.

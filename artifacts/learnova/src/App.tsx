@@ -7,9 +7,9 @@ import { Layout } from "@/components/layout";
 
 import Landing from "@/pages/landing";
 import StudentSignin from "@/pages/student-signin";
-import StudentRequest from "@/pages/student-request";
+import StudentSignup from "@/pages/student-signup";
 import TeacherSignin from "@/pages/teacher-signin";
-import TeacherRequest from "@/pages/teacher-request";
+import TeacherSignup from "@/pages/teacher-signup";
 import AdminSignin from "@/pages/admin-signin";
 import AdminDashboard from "@/pages/admin-dashboard";
 import NotFound from "@/pages/not-found";
@@ -61,9 +61,9 @@ function Router() {
       {/* Public routes */}
       <Route path="/" component={Landing} />
       <Route path="/student/signin" component={StudentSignin} />
-      <Route path="/student/request" component={StudentRequest} />
+      <Route path="/student/signup" component={StudentSignup} />
       <Route path="/teacher/signin" component={TeacherSignin} />
-      <Route path="/teacher/request" component={TeacherRequest} />
+      <Route path="/teacher/signup" component={TeacherSignup} />
       <Route path="/admin/signin" component={AdminSignin} />
 
       {/* Admin routes */}

@@ -9,4 +9,6 @@ export * from "./notifications";
 export * from "./admins";
 export * from "./student_requests";
 export * from "./teacher_requests";
+export * from "./teachers";
+export * from "./teacher_subjects";
 export * from "./activity_logs";
