@@ -1,0 +1,172 @@
+UI FIX — MISSING TEACHER SUBJECT & GRADE DROPDOWNS
+
+⚠️ IMPORTANT:
+
+* DO NOT rebuild the dashboard
+* DO NOT modify backend permissions logic
+* DO NOT recreate admin system
+* ONLY fix the missing UI dropdown components
+
+==================================================
+🚨 CURRENT PROBLEM
+==================
+
+Backend permission system works correctly:
+
+* admin can assign subjects
+* admin can assign grades
+
+BUT:
+
+The teacher dashboard DOES NOT show:
+
+1. subject dropdown/switcher
+2. grade dropdown/filter
+
+The functionality exists in backend,
+but the UI controls are missing.
+
+==================================================
+✅ REQUIRED FIX
+==============
+
+Add TWO dropdown selectors to the Teacher Dashboard topbar/header.
+
+==================================================
+1️⃣ SUBJECT SWITCHER DROPDOWN
+=============================
+
+Show ONLY subjects assigned to teacher.
+
+Example:
+
+[ Mathematics ▼ ]
+
+Teacher can switch between assigned subjects.
+
+==================================================
+✅ SUBJECT DROPDOWN BEHAVIOR
+===========================
+
+Changing subject updates:
+
+* Files
+* Homework
+* Ratings
+* Students
+* Notifications
+
+for the selected subject ONLY.
+
+==================================================
+2️⃣ GRADE FILTER DROPDOWN
+=========================
+
+Add second dropdown beside subject selector.
+
+Example:
+
+[ Grade 9 ▼ ]
+
+OR multi-select if preferred.
+
+Show ONLY grades assigned by admin.
+
+==================================================
+✅ GRADE FILTER BEHAVIOR
+=======================
+
+Changing grade filters:
+
+* students list
+* homework
+* files
+* ratings
+
+for selected grade ONLY.
+
+==================================================
+🎨 UI REQUIREMENTS
+==================
+
+Place dropdowns in:
+Teacher Dashboard topbar/header.
+
+Layout example:
+
+[ Mathematics ▼ ]   [ Grade 9 ▼ ]
+
+Use:
+
+* smooth animations
+* hover effects
+* elegant styling
+* premium SaaS feel
+* responsive layout
+
+NOT:
+
+* bulky selects
+* plain HTML styling
+* oversized controls
+
+==================================================
+🧠 STATE MANAGEMENT
+===================
+
+Maintain:
+
+* currentSelectedSubject
+* currentSelectedGrade
+
+Persist during session.
+
+==================================================
+🗄️ DATA SOURCE
+===============
+
+Populate dropdowns from backend auth/user data.
+
+Example:
+
+```json id="jlwm1o"
+{
+  "teacher": {
+    "subjects": [
+      "Mathematics",
+      "Physics"
+    ],
+    "grades": [
+      "Grade 9",
+      "Grade 10"
+    ]
+  }
+}
+```
+
+==================================================
+⚠️ IMPORTANT
+============
+
+DO NOT:
+
+* rebuild permissions system
+* remove existing filters
+* redesign dashboard
+
+ONLY:
+
+* render missing dropdown UI
+* connect dropdowns to existing backend logic
+
+==================================================
+🎯 FINAL RESULT
+===============
+
+Teacher logs in →
+Can visually switch:
+
+* subject
+* grade
+
+Dashboard updates dynamically and professionally.

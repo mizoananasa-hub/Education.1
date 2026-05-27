@@ -1,4 +1,5 @@
 import { useAuth } from "@/components/auth-provider";
+import { useTeacher } from "@/components/teacher-context";
 import { useGetRatingsBySubject, getGetRatingsBySubjectQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -17,6 +18,7 @@ function getLabelColor(label: string) {
 
 export default function TeacherRatings() {
   const { user } = useAuth();
+  const { currentSubject } = useTeacher();
   
   const { data: ratings, isLoading } = useGetRatingsBySubject({
     query: { enabled: !!user, queryKey: getGetRatingsBySubjectQueryKey() }

@@ -1,12 +1,18 @@
 import { useAuth } from "@/components/auth-provider";
+import { TeacherProvider, useTeacher } from "@/components/teacher-context";
 import { Link, useLocation } from "wouter";
 import {
   LogOut, Menu, User, BookOpen, Star, FileText, Users,
   Sparkles, BookText, Layers, Settings, Bell, ClipboardList,
+  ChevronDown, Check, GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { DialogTitle } from "@/components/ui/dialog";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
@@ -15,7 +21,118 @@ interface LayoutProps {
   role: "student" | "teacher";
 }
 
-export function Layout({ children, role }: LayoutProps) {
+function TeacherTopbar() {
+  const { currentSubject, currentGrade, setCurrentSubject, setCurrentGrade, subjects, grades } = useTeacher();
+
+  return (
+    <div className="sticky top-0 z-20 flex items-center gap-3 px-6 py-3 bg-card/95 backdrop-blur border-b border-border">
+      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mr-1 hidden sm:block">
+        Viewing:
+      </span>
+
+      {/* Subject dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            className={cn(
+              "inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-sm font-medium transition-all duration-200",
+              "bg-primary/5 border-primary/20 text-primary hover:bg-primary/10 hover:border-primary/40",
+              "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+            )}
+          >
+            <BookOpen className="w-3.5 h-3.5 shrink-0" />
+            <span className="max-w-[140px] truncate">{currentSubject || "No Subject"}</span>
+            <ChevronDown className="w-3.5 h-3.5 shrink-0 text-primary/60" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="min-w-[200px]">
+          <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Assigned Subjects</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {subjects.length === 0 ? (
+            <DropdownMenuItem disabled className="text-muted-foreground text-xs">
+              No subjects assigned yet
+            </DropdownMenuItem>
+          ) : (
+            subjects.map((s) => (
+              <DropdownMenuItem
+                key={s}
+                onClick={() => setCurrentSubject(s)}
+                className="gap-2 cursor-pointer"
+              >
+                <span className={cn(
+                  "flex h-4 w-4 items-center justify-center rounded-full border transition-colors shrink-0",
+                  currentSubject === s ? "border-primary bg-primary" : "border-muted-foreground/30"
+                )}>
+                  {currentSubject === s && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
+                </span>
+                {s}
+              </DropdownMenuItem>
+            ))
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Grade dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            className={cn(
+              "inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-sm font-medium transition-all duration-200",
+              "bg-violet-500/5 border-violet-400/20 text-violet-700 dark:text-violet-400",
+              "hover:bg-violet-500/10 hover:border-violet-400/40",
+              "focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/30",
+            )}
+          >
+            <GraduationCap className="w-3.5 h-3.5 shrink-0" />
+            <span>{currentGrade === "All" ? "All Grades" : currentGrade}</span>
+            <ChevronDown className="w-3.5 h-3.5 shrink-0 text-violet-400/60" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="min-w-[180px]">
+          <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Assigned Grades</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {grades.length > 0 && (
+            <DropdownMenuItem
+              onClick={() => setCurrentGrade("All")}
+              className="gap-2 cursor-pointer"
+            >
+              <span className={cn(
+                "flex h-4 w-4 items-center justify-center rounded-full border transition-colors shrink-0",
+                currentGrade === "All" ? "border-violet-600 bg-violet-600" : "border-muted-foreground/30"
+              )}>
+                {currentGrade === "All" && <Check className="w-2.5 h-2.5 text-white" />}
+              </span>
+              All Grades
+            </DropdownMenuItem>
+          )}
+          {grades.length === 0 ? (
+            <DropdownMenuItem disabled className="text-muted-foreground text-xs">
+              No grades assigned yet
+            </DropdownMenuItem>
+          ) : (
+            grades.map((g) => (
+              <DropdownMenuItem
+                key={g}
+                onClick={() => setCurrentGrade(g)}
+                className="gap-2 cursor-pointer"
+              >
+                <span className={cn(
+                  "flex h-4 w-4 items-center justify-center rounded-full border transition-colors shrink-0",
+                  currentGrade === g ? "border-violet-600 bg-violet-600" : "border-muted-foreground/30"
+                )}>
+                  {currentGrade === g && <Check className="w-2.5 h-2.5 text-white" />}
+                </span>
+                {g}
+              </DropdownMenuItem>
+            ))
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
+function LayoutInner({ children, role }: LayoutProps) {
   const { user, logout } = useAuth();
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -200,6 +317,8 @@ export function Layout({ children, role }: LayoutProps) {
           </Button>
         </header>
 
+        {role === "teacher" && <TeacherTopbar />}
+
         <div className="flex-1 overflow-auto bg-muted/20">
           <div className="p-6 md:p-8 max-w-6xl mx-auto w-full">
             {children}
@@ -208,4 +327,15 @@ export function Layout({ children, role }: LayoutProps) {
       </main>
     </div>
   );
+}
+
+export function Layout({ children, role }: LayoutProps) {
+  if (role === "teacher") {
+    return (
+      <TeacherProvider>
+        <LayoutInner role={role}>{children}</LayoutInner>
+      </TeacherProvider>
+    );
+  }
+  return <LayoutInner role={role}>{children}</LayoutInner>;
 }

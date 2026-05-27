@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useAuth } from "@/components/auth-provider";
+import { useTeacher } from "@/components/teacher-context";
 import { useGetFiles, useDeleteFile, getGetFilesQueryKey } from "@workspace/api-client-react";
 import { uploadFormDataFile } from "@/lib/upload";
 import { Button } from "@/components/ui/button";
@@ -12,32 +13,35 @@ import { format } from "date-fns";
 
 export default function TeacherFiles() {
   const { user } = useAuth();
+  const { currentSubject } = useTeacher();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [isUploading, setIsUploading] = useState(false);
-  
+
+  const subject = currentSubject || user?.subject || "";
+
   const { data: files, isLoading } = useGetFiles(
-    { subject: user?.subject || "" },
-    { query: { enabled: !!user?.subject, queryKey: getGetFilesQueryKey({ subject: user?.subject || "" }) } }
+    { subject },
+    { query: { enabled: !!subject, queryKey: getGetFilesQueryKey({ subject }) } }
   );
 
   const deleteMutation = useDeleteFile();
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user?.subject) return;
+    if (!file || !subject) return;
 
     setIsUploading(true);
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("subject", user.subject);
+      formData.append("subject", subject);
 
       await uploadFormDataFile("/api/files", formData);
       
-      queryClient.invalidateQueries({ queryKey: getGetFilesQueryKey({ subject: user.subject }) });
+      queryClient.invalidateQueries({ queryKey: getGetFilesQueryKey({ subject }) });
       toast({ title: "File uploaded successfully" });
     } catch (err: any) {
       toast({ 
@@ -58,9 +62,7 @@ export default function TeacherFiles() {
     
     deleteMutation.mutate({ id }, {
       onSuccess: () => {
-        if (user?.subject) {
-          queryClient.invalidateQueries({ queryKey: getGetFilesQueryKey({ subject: user.subject }) });
-        }
+        queryClient.invalidateQueries({ queryKey: getGetFilesQueryKey({ subject }) });
         toast({ title: "File deleted" });
       },
       onError: (err) => {
@@ -77,7 +79,9 @@ export default function TeacherFiles() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Files: {user?.subject}</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Files{subject ? `: ${subject}` : ""}
+          </h1>
           <p className="text-muted-foreground mt-1">Manage learning materials for your students.</p>
         </div>
         
@@ -89,14 +93,23 @@ export default function TeacherFiles() {
             onChange={handleUpload}
             accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.ppt,.pptx"
           />
-          <Button onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+          <Button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading || !subject}
+          >
             {isUploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
             Upload File
           </Button>
         </div>
       </div>
 
-      {isLoading ? (
+      {!subject ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center border rounded-2xl bg-card border-dashed">
+          <FileText className="w-12 h-12 text-muted-foreground/40 mb-4" />
+          <p className="text-lg font-medium text-muted-foreground">No subject selected</p>
+          <p className="text-sm text-muted-foreground mt-1">Select a subject from the dropdown above to view files.</p>
+        </div>
+      ) : isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <Card key={i}>
@@ -114,7 +127,7 @@ export default function TeacherFiles() {
           </div>
           <h3 className="text-xl font-semibold mb-2">No files yet</h3>
           <p className="text-muted-foreground max-w-sm mb-6">
-            Upload documents, presentations, or assignments for your {user?.subject} students.
+            Upload documents, presentations, or assignments for your {subject} students.
           </p>
           <Button onClick={() => fileInputRef.current?.click()} variant="outline">
             Upload First File

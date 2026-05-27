@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/components/auth-provider";
+import { useTeacher } from "@/components/teacher-context";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,6 +64,7 @@ async function apiFetch(path: string, opts?: RequestInit) {
 
 export default function TeacherHomework() {
   const { user } = useAuth();
+  const { currentSubject } = useTeacher();
   const { toast } = useToast();
   const [homeworks, setHomeworks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,7 +128,7 @@ export default function TeacherHomework() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Homework</h1>
-          <p className="text-muted-foreground mt-1">{user?.subject} — manage assignments</p>
+          <p className="text-muted-foreground mt-1">{currentSubject || user?.subject} — manage assignments</p>
         </div>
         <Button onClick={() => setCreateOpen(true)} className="gap-2">
           <Plus className="w-4 h-4" /> Create Homework
@@ -195,7 +197,7 @@ export default function TeacherHomework() {
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         onCreated={() => { setCreateOpen(false); load(); }}
-        subject={user?.subject ?? ""}
+        subject={currentSubject || user?.subject || ""}
         teacherName={user?.fullName ?? ""}
       />
 

@@ -1,15 +1,17 @@
 import { useState } from "react";
 import { useAuth } from "@/components/auth-provider";
+import { useTeacher } from "@/components/teacher-context";
 import { useGetStudents, useUpsertRating, getGetStudentsQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Star, Loader2 } from "lucide-react";
+import { Search, Star, Loader2, GraduationCap } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Student } from "@workspace/api-client-react";
 
@@ -22,6 +24,7 @@ function getLabelFromScore(score: number): string {
 
 export default function TeacherStudents() {
   const { user } = useAuth();
+  const { currentSubject, currentGrade, grades } = useTeacher();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -56,7 +59,7 @@ export default function TeacherStudents() {
   };
 
   const submitRating = () => {
-    if (!selectedStudent || !user?.subject) return;
+    if (!selectedStudent || !currentSubject) return;
 
     upsertMutation.mutate({
       studentId: selectedStudent.id,
@@ -76,12 +79,24 @@ export default function TeacherStudents() {
     });
   };
 
+  // Filter students by grade selection
+  const filteredStudents = students?.filter((s) => {
+    if (currentGrade === "All") return true;
+    // currentGrade is like "Grade 9", student.grade is a number like 9
+    const gradeNum = parseInt(currentGrade.replace("Grade ", ""), 10);
+    return s.grade === gradeNum;
+  }) ?? [];
+
+  const gradeLabel = currentGrade === "All" ? "all assigned grades" : currentGrade;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Students</h1>
-          <p className="text-muted-foreground mt-1">Search and rate your students.</p>
+          <p className="text-muted-foreground mt-1">
+            {currentSubject ? `${currentSubject} · ` : ""}{gradeLabel}
+          </p>
         </div>
         
         <div className="relative w-full sm:w-72">
@@ -97,16 +112,28 @@ export default function TeacherStudents() {
 
       <Card>
         <CardHeader>
-          <CardTitle>All Students</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>
+              {currentGrade === "All" ? "All Students" : `${currentGrade} Students`}
+            </CardTitle>
+            {grades.length > 0 && (
+              <Badge variant="outline" className="bg-violet-50 text-violet-700 border-violet-200 text-xs gap-1.5">
+                <GraduationCap className="w-3 h-3" />
+                {currentGrade === "All" ? `All ${grades.length} grade${grades.length > 1 ? "s" : ""}` : currentGrade}
+              </Badge>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex justify-center p-8">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
             </div>
-          ) : students?.length === 0 ? (
+          ) : filteredStudents.length === 0 ? (
             <div className="text-center p-8 text-muted-foreground">
-              No students found.
+              {students?.length === 0
+                ? "No students found."
+                : `No students in ${gradeLabel}.`}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -120,13 +147,17 @@ export default function TeacherStudents() {
                   </tr>
                 </thead>
                 <tbody>
-                  {students?.map((student) => (
+                  {filteredStudents.map((student) => (
                     <tr key={student.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                       <td className="px-6 py-4">
                         <div className="font-medium text-foreground">{student.fullName}</div>
                         <div className="text-xs text-muted-foreground">{student.studentCode}</div>
                       </td>
-                      <td className="px-6 py-4">Grade {student.grade}</td>
+                      <td className="px-6 py-4">
+                        <Badge variant="outline" className="bg-violet-50 text-violet-700 border-violet-200 text-xs">
+                          Grade {student.grade}
+                        </Badge>
+                      </td>
                       <td className="px-6 py-4">{student.religion}</td>
                       <td className="px-6 py-4 text-right">
                         <Button variant="secondary" size="sm" onClick={() => openRatingModal(student)}>
@@ -148,7 +179,7 @@ export default function TeacherStudents() {
           <DialogHeader>
             <DialogTitle>Rate Student: {selectedStudent?.fullName}</DialogTitle>
             <DialogDescription>
-              Evaluate the student's performance in {user?.subject}.
+              Evaluate the student's performance in {currentSubject || user?.subject}.
             </DialogDescription>
           </DialogHeader>
           

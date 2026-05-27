@@ -10,6 +10,8 @@ export interface AuthUser {
   grade: number | null;
   religion: string | null;
   subject: string | null;
+  subjects?: string[];
+  grades?: string[];
   role: "student" | "teacher" | "admin";
 }
 
