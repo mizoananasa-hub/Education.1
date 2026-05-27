@@ -1,6 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcrypt";
-import { db, studentsTable, adminsTable, teachersTable, teacherSubjectsTable, activityLogsTable } from "@workspace/db";
+import { db, studentsTable, adminsTable, teachersTable, teacherSubjectsTable, teacherGradesTable, activityLogsTable } from "@workspace/db";
 import { eq, or } from "drizzle-orm";
 import { signToken, requireAuth } from "../middlewares/auth.js";
 import type { Request, Response } from "express";
@@ -219,9 +219,13 @@ router.post("/auth/teacher/signin", async (req: Request, res: Response): Promise
     return;
   }
 
-  // Get assigned subjects
-  const subjects = await db.select().from(teacherSubjectsTable).where(eq(teacherSubjectsTable.teacherId, teacher.id));
+  // Get assigned subjects and grades
+  const [subjects, teacherGrades] = await Promise.all([
+    db.select().from(teacherSubjectsTable).where(eq(teacherSubjectsTable.teacherId, teacher.id)),
+    db.select().from(teacherGradesTable).where(eq(teacherGradesTable.teacherId, teacher.id)),
+  ]);
   const subjectList = subjects.map((s) => s.subjectName);
+  const gradeList = teacherGrades.map((g) => g.grade);
 
   await db.insert(activityLogsTable).values({
     userId: teacher.id, userRole: "teacher", userName: teacher.fullName,
@@ -235,7 +239,10 @@ router.post("/auth/teacher/signin", async (req: Request, res: Response): Promise
 
   res.json({
     token,
-    user: { id: teacher.id, fullName: teacher.fullName, studentCode: null, grade: null, religion: null, subject: subjectList[0] ?? "Unassigned", subjects: subjectList, role: "teacher" },
+    user: {
+      id: teacher.id, fullName: teacher.fullName, studentCode: null, grade: null, religion: null,
+      subject: subjectList[0] ?? "Unassigned", subjects: subjectList, grades: gradeList, role: "teacher",
+    },
   });
 });
 
@@ -273,9 +280,16 @@ router.get("/auth/me", requireAuth, async (req: Request, res: Response): Promise
   const user = (req as Request & { user: JwtPayload }).user;
 
   if (user.role === "teacher" && user.id) {
-    const subjects = await db.select().from(teacherSubjectsTable).where(eq(teacherSubjectsTable.teacherId, user.id));
+    const [subjects, teacherGrades] = await Promise.all([
+      db.select().from(teacherSubjectsTable).where(eq(teacherSubjectsTable.teacherId, user.id)),
+      db.select().from(teacherGradesTable).where(eq(teacherGradesTable.teacherId, user.id)),
+    ]);
     const subjectList = subjects.map((s) => s.subjectName);
-    res.json({ id: user.id, fullName: user.fullName, studentCode: null, grade: null, religion: null, subject: subjectList[0] ?? "Unassigned", subjects: subjectList, role: user.role });
+    const gradeList = teacherGrades.map((g) => g.grade);
+    res.json({
+      id: user.id, fullName: user.fullName, studentCode: null, grade: null, religion: null,
+      subject: subjectList[0] ?? "Unassigned", subjects: subjectList, grades: gradeList, role: user.role,
+    });
     return;
   }
 

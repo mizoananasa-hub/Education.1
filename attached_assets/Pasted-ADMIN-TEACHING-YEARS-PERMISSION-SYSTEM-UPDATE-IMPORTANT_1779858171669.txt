@@ -1,0 +1,227 @@
+ADMIN TEACHING YEARS PERMISSION SYSTEM UPDATE
+
+⚠️ IMPORTANT:
+
+* DO NOT rebuild the admin dashboard
+* DO NOT rebuild teacher auth
+* DO NOT remove existing subject assignment system
+* ONLY extend teacher permissions professionally
+
+The admin can already assign MULTIPLE subjects to teachers.
+
+Now add:
+➡️ grade/year teaching permissions.
+
+==================================================
+🎯 REQUIRED FEATURE
+===================
+
+Admins must now control:
+
+1. Which SUBJECTS a teacher can teach
+2. Which GRADES/YEARS the teacher can teach
+
+A teacher should ONLY access students, homework, files, and ratings for:
+
+* assigned subjects
+* assigned grades
+
+==================================================
+✅ ADMIN TEACHER MANAGEMENT UPDATE
+=================================
+
+In existing Teacher Management page:
+
+Add:
+"Assigned Grades"
+
+Use:
+
+* multi-select dropdown
+  OR
+* checkbox grid
+
+Available grades:
+
+* Grade 1
+* Grade 2
+* Grade 3
+* Grade 4
+* Grade 5
+* Grade 6
+* Grade 7
+* Grade 8
+* Grade 9
+* Grade 10
+* Grade 11
+* Grade 12
+
+Admin can assign MULTIPLE grades.
+
+==================================================
+🗄️ DATABASE UPDATE
+===================
+
+Create new table:
+
+teacher_grades
+
+Columns:
+
+* id
+* teacher_id
+* grade
+* created_at
+
+==================================================
+✅ LOGIN RESPONSE UPDATE
+=======================
+
+Teacher auth response should now include:
+
+```json id="8mld7q"
+{
+  "teacher": {
+    "id": 1,
+    "name": "Mr Ahmed",
+    "subjects": [
+      "Mathematics",
+      "Physics"
+    ],
+    "grades": [
+      "Grade 9",
+      "Grade 10"
+    ]
+  }
+}
+```
+
+==================================================
+🎒 TEACHER DASHBOARD FILTERING
+==============================
+
+Teacher dashboard content MUST now respect BOTH:
+
+* selected subject
+* assigned grades
+
+==================================================
+📁 FILES SYSTEM
+===============
+
+When uploading files:
+Teacher chooses:
+
+* target grade(s)
+
+Teacher can ONLY choose grades assigned by admin.
+
+Students ONLY see files matching:
+
+* their grade
+* their subject
+
+==================================================
+📝 HOMEWORK SYSTEM
+==================
+
+When creating homework:
+Teacher can ONLY assign homework to:
+
+* grades they are allowed to teach
+
+Example:
+
+Teacher allowed grades:
+
+* Grade 9
+* Grade 10
+
+Teacher CANNOT assign homework to:
+
+* Grade 11
+* Grade 12
+
+==================================================
+⭐ RATINGS SYSTEM
+================
+
+Teacher can ONLY rate:
+
+* students in assigned grades
+* for assigned subjects
+
+==================================================
+👥 STUDENTS TAB
+===============
+
+Teacher sees ONLY students:
+
+* within assigned grades
+
+Example:
+
+Teacher grades:
+
+* Grade 5
+* Grade 6
+
+Teacher should NOT see:
+
+* Grade 7 students
+* Grade 8 students
+
+==================================================
+🔐 BACKEND SECURITY RULES
+=========================
+
+Validate permissions BOTH:
+
+* frontend
+* backend
+
+Teacher MUST NEVER access:
+
+* unassigned grades
+* unassigned subjects
+
+==================================================
+🎨 UI REQUIREMENTS
+==================
+
+Teacher dashboard should now clearly display:
+
+Current Subject:
+[ Mathematics ▼ ]
+
+Current Allowed Grades:
+Grade 9 • Grade 10
+
+Use elegant badges/chips.
+
+==================================================
+⚠️ IMPORTANT
+============
+
+DO NOT:
+
+* rebuild admin dashboard
+* remove multi-subject support
+* redesign dashboards
+
+ONLY:
+
+* extend permissions system
+* add grade/year teaching access
+* filter dashboard data properly
+
+==================================================
+🎯 FINAL RESULT
+===============
+
+Admin now fully controls:
+
+* what subjects a teacher teaches
+* what grades a teacher teaches
+
+Learnova now behaves like a REAL school management system with proper academic permissions.

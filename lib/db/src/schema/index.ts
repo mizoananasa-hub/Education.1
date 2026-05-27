@@ -11,4 +11,5 @@ export * from "./student_requests";
 export * from "./teacher_requests";
 export * from "./teachers";
 export * from "./teacher_subjects";
+export * from "./teacher_grades";
 export * from "./activity_logs";

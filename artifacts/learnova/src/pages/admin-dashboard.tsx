@@ -63,6 +63,7 @@ interface Teacher {
   fullName: string;
   email: string;
   subjects: string[];
+  grades: string[];
   accountStatus: string;
   isActive: boolean;
   createdAt: string;
@@ -237,11 +238,14 @@ const SUBJECTS = [
   "Social Studies", "Islamic Revision", "Christian Religion", "Biology", "Physics", "Chemistry",
 ];
 
+const GRADES = Array.from({ length: 12 }, (_, i) => `Grade ${i + 1}`);
+
 function TeacherRequestsTab() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [approveId, setApproveId] = useState<number | null>(null);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [selectedGrades, setSelectedGrades] = useState<string[]>([]);
 
   const { data = [], isLoading } = useQuery<TeacherRequest[]>({
     queryKey: ["admin", "teacher-requests"],
@@ -249,12 +253,13 @@ function TeacherRequestsTab() {
   });
 
   const approveMut = useMutation({
-    mutationFn: ({ id, subjects }: { id: number; subjects: string[] }) =>
-      apiFetch(`/api/admin/teacher-requests/${id}/approve`, { method: "POST", body: JSON.stringify({ subjects }) }),
+    mutationFn: ({ id, subjects, grades }: { id: number; subjects: string[]; grades: string[] }) =>
+      apiFetch(`/api/admin/teacher-requests/${id}/approve`, { method: "POST", body: JSON.stringify({ subjects, grades }) }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin"] });
       setApproveId(null);
       setSelectedSubjects([]);
+      setSelectedGrades([]);
       toast({ title: "Teacher approved successfully" });
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
@@ -270,11 +275,13 @@ function TeacherRequestsTab() {
 
   const toggleSubject = (s: string) =>
     setSelectedSubjects((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]);
+  const toggleGrade = (g: string) =>
+    setSelectedGrades((prev) => prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]);
 
   return (
     <div className="space-y-8">
       <SectionHeader title="Teacher Signup Requests" count={data.length} label="pending" />
-      <p className="text-sm text-muted-foreground -mt-4">Teachers who applied for an account. Approve and optionally assign subjects immediately, or assign them later.</p>
+      <p className="text-sm text-muted-foreground -mt-4">Teachers who applied for an account. Approve and assign subjects and grades, or update them later from the Teachers tab.</p>
 
       {data.length === 0 ? (
         <EmptyState message="No pending teacher requests" icon={<CheckCircle2 className="w-8 h-8 text-green-500" />} />
@@ -290,7 +297,7 @@ function TeacherRequestsTab() {
                 <Badge className="bg-amber-100 text-amber-700 border-amber-200">Pending</Badge>
               </div>
               <div className="flex gap-2 mt-4">
-                <Button size="sm" onClick={() => { setApproveId(r.id); setSelectedSubjects([]); }} className="gap-1.5 bg-green-600 hover:bg-green-700">
+                <Button size="sm" onClick={() => { setApproveId(r.id); setSelectedSubjects([]); setSelectedGrades([]); }} className="gap-1.5 bg-green-600 hover:bg-green-700">
                   <CheckCircle2 className="w-4 h-4" /> Approve
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => rejectMut.mutate(r.id)} className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/5" disabled={rejectMut.isPending}>
@@ -302,44 +309,72 @@ function TeacherRequestsTab() {
         </div>
       )}
 
-      {/* Approve dialog with optional subject assignment */}
+      {/* Approve dialog with subject + grade assignment */}
       <Dialog open={approveId !== null} onOpenChange={(o) => !o && setApproveId(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Approve Teacher</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Optionally assign subjects now. You can always add or change subjects later from the Teachers tab.
+            Assign subjects and grades now, or update them later from the Teachers tab.
           </p>
-          <div className="mt-3">
-            <p className="text-sm font-medium mb-2">Assign Subjects <span className="text-muted-foreground font-normal">(optional)</span></p>
-            <div className="flex flex-wrap gap-2">
-              {SUBJECTS.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => toggleSubject(s)}
-                  className={cn(
-                    "text-xs px-3 py-1.5 rounded-full border transition-colors",
-                    selectedSubjects.includes(s)
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background text-muted-foreground border-border hover:border-primary/50"
-                  )}
-                >
-                  {s}
-                </button>
-              ))}
+
+          <div className="mt-4 space-y-5">
+            <div>
+              <p className="text-sm font-medium mb-2">Assign Subjects <span className="text-muted-foreground font-normal">(optional)</span></p>
+              <div className="flex flex-wrap gap-2">
+                {SUBJECTS.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => toggleSubject(s)}
+                    className={cn(
+                      "text-xs px-3 py-1.5 rounded-full border transition-colors",
+                      selectedSubjects.includes(s)
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-muted-foreground border-border hover:border-primary/50"
+                    )}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+              {selectedSubjects.length > 0 && (
+                <p className="text-xs text-primary mt-2">{selectedSubjects.length} subject{selectedSubjects.length > 1 ? "s" : ""} selected</p>
+              )}
             </div>
-            {selectedSubjects.length > 0 && (
-              <p className="text-xs text-primary mt-2">{selectedSubjects.length} subject{selectedSubjects.length > 1 ? "s" : ""} selected</p>
-            )}
+
+            <div>
+              <p className="text-sm font-medium mb-2">Assign Grades <span className="text-muted-foreground font-normal">(optional)</span></p>
+              <div className="flex flex-wrap gap-2">
+                {GRADES.map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => toggleGrade(g)}
+                    className={cn(
+                      "text-xs px-3 py-1.5 rounded-full border transition-colors",
+                      selectedGrades.includes(g)
+                        ? "bg-violet-600 text-white border-violet-600"
+                        : "bg-background text-muted-foreground border-border hover:border-violet-400"
+                    )}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+              {selectedGrades.length > 0 && (
+                <p className="text-xs text-violet-600 mt-2">{selectedGrades.length} grade{selectedGrades.length > 1 ? "s" : ""} selected</p>
+              )}
+            </div>
           </div>
-          <DialogFooter className="mt-4">
+
+          <DialogFooter className="mt-5">
             <Button variant="outline" onClick={() => setApproveId(null)}>Cancel</Button>
             <Button
               className="bg-green-600 hover:bg-green-700"
               disabled={approveMut.isPending}
-              onClick={() => approveId && approveMut.mutate({ id: approveId, subjects: selectedSubjects })}
+              onClick={() => approveId && approveMut.mutate({ id: approveId, subjects: selectedSubjects, grades: selectedGrades })}
             >
               {approveMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               Approve
@@ -491,6 +526,8 @@ function TeachersTab() {
   const { toast } = useToast();
   const [editSubjectsId, setEditSubjectsId] = useState<number | null>(null);
   const [editSubjectsList, setEditSubjectsList] = useState<string[]>([]);
+  const [editGradesId, setEditGradesId] = useState<number | null>(null);
+  const [editGradesList, setEditGradesList] = useState<string[]>([]);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
   const { data = [], isLoading } = useQuery<Teacher[]>({
@@ -511,6 +548,13 @@ function TeachersTab() {
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  const gradesMut = useMutation({
+    mutationFn: ({ id, grades }: { id: number; grades: string[] }) =>
+      apiFetch(`/api/admin/teachers/${id}/grades`, { method: "PUT", body: JSON.stringify({ grades }) }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin", "teachers"] }); setEditGradesId(null); toast({ title: "Grades updated" }); },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
   const deleteMut = useMutation({
     mutationFn: (id: number) => apiFetch(`/api/admin/teachers/${id}`, { method: "DELETE" }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin", "teachers"] }); setDeleteId(null); toast({ title: "Teacher removed" }); },
@@ -521,6 +565,8 @@ function TeachersTab() {
 
   const toggleEditSubject = (s: string) =>
     setEditSubjectsList((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]);
+  const toggleEditGrade = (g: string) =>
+    setEditGradesList((prev) => prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]);
 
   return (
     <div className="space-y-6">
@@ -540,11 +586,21 @@ function TeachersTab() {
                     }
                   </div>
                   <p className="text-sm text-muted-foreground mb-2">{t.email} · Joined {fmt(t.createdAt)}</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {t.subjects.length > 0
-                      ? t.subjects.map((s) => <Badge key={s} className="bg-blue-100 text-blue-700 border-blue-200 text-xs">{s}</Badge>)
-                      : <span className="text-xs text-muted-foreground italic">No subjects assigned</span>
-                    }
+                  <div className="space-y-1.5">
+                    <div className="flex flex-wrap gap-1.5 items-center">
+                      <span className="text-xs text-muted-foreground w-16 flex-shrink-0">Subjects:</span>
+                      {t.subjects.length > 0
+                        ? t.subjects.map((s) => <Badge key={s} className="bg-blue-100 text-blue-700 border-blue-200 text-xs">{s}</Badge>)
+                        : <span className="text-xs text-muted-foreground italic">None assigned</span>
+                      }
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 items-center">
+                      <span className="text-xs text-muted-foreground w-16 flex-shrink-0">Grades:</span>
+                      {t.grades.length > 0
+                        ? t.grades.map((g) => <Badge key={g} className="bg-violet-100 text-violet-700 border-violet-200 text-xs">{g}</Badge>)
+                        : <span className="text-xs text-muted-foreground italic">None assigned</span>
+                      }
+                    </div>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -554,6 +610,13 @@ function TeachersTab() {
                     className="gap-1.5 text-xs h-8"
                   >
                     <Pencil className="w-3.5 h-3.5" /> Subjects
+                  </Button>
+                  <Button
+                    size="sm" variant="outline"
+                    onClick={() => { setEditGradesId(t.id); setEditGradesList([...t.grades]); }}
+                    className="gap-1.5 text-xs h-8 text-violet-700 border-violet-300 hover:bg-violet-50"
+                  >
+                    <GraduationCap className="w-3.5 h-3.5" /> Grades
                   </Button>
                   <Button
                     size="sm" variant="outline"
@@ -610,10 +673,48 @@ function TeachersTab() {
         </DialogContent>
       </Dialog>
 
+      {/* Grade assignment dialog */}
+      <Dialog open={editGradesId !== null} onOpenChange={(o) => !o && setEditGradesId(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Assign Grades</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Select all grade levels this teacher is allowed to teach. This replaces any existing assignment.</p>
+          <div className="flex flex-wrap gap-2 mt-3">
+            {GRADES.map((g) => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => toggleEditGrade(g)}
+                className={cn(
+                  "text-xs px-3 py-1.5 rounded-full border transition-colors",
+                  editGradesList.includes(g)
+                    ? "bg-violet-600 text-white border-violet-600"
+                    : "bg-background text-muted-foreground border-border hover:border-violet-400"
+                )}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
+          {editGradesList.length > 0 && (
+            <p className="text-xs text-violet-600 mt-2">{editGradesList.length} grade{editGradesList.length > 1 ? "s" : ""} selected</p>
+          )}
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setEditGradesId(null)}>Cancel</Button>
+            <Button
+              className="bg-violet-600 hover:bg-violet-700"
+              disabled={gradesMut.isPending}
+              onClick={() => editGradesId && gradesMut.mutate({ id: editGradesId, grades: editGradesList })}
+            >
+              {gradesMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null} Save Grades
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={deleteId !== null} onOpenChange={(o) => !o && setDeleteId(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle className="text-destructive flex items-center gap-2"><AlertTriangle className="w-5 h-5" /> Remove Teacher</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">This will permanently remove the teacher's account and all assigned subjects.</p>
+          <p className="text-sm text-muted-foreground">This will permanently remove the teacher's account and all assigned subjects and grades.</p>
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
             <Button variant="destructive" disabled={deleteMut.isPending} onClick={() => deleteId && deleteMut.mutate(deleteId)}>

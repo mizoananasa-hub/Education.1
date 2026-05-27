@@ -2,7 +2,7 @@ import { Router } from "express";
 import bcrypt from "bcrypt";
 import {
   db, studentsTable, adminsTable, teachersTable, teacherSubjectsTable,
-  activityLogsTable,
+  teacherGradesTable, activityLogsTable,
 } from "@workspace/db";
 import { eq, desc, count, and, inArray } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/auth.js";
@@ -50,7 +50,6 @@ router.post("/admin/student-requests/:id/approve", requireAdmin, async (req: Req
   if (!student) { res.status(404).json({ error: "Student not found" }); return; }
   if (student.accountStatus !== "pending") { res.status(400).json({ error: "Already processed" }); return; }
 
-  // Assign a proper student code
   const studentCode = `STU-${1000 + id}`;
 
   await db.update(studentsTable)
@@ -95,7 +94,7 @@ router.get("/admin/teacher-requests", requireAdmin, async (req: Request, res: Re
 router.post("/admin/teacher-requests/:id/approve", requireAdmin, async (req: Request, res: Response): Promise<void> => {
   const id = parseInt(req.params.id, 10);
   const admin = getAdmin(req);
-  const { subjects } = req.body; // Array of subject names
+  const { subjects, grades } = req.body;
 
   const [teacher] = await db.select().from(teachersTable).where(eq(teachersTable.id, id)).limit(1);
   if (!teacher) { res.status(404).json({ error: "Teacher not found" }); return; }
@@ -105,17 +104,22 @@ router.post("/admin/teacher-requests/:id/approve", requireAdmin, async (req: Req
     .set({ accountStatus: "approved", isActive: true })
     .where(eq(teachersTable.id, id));
 
-  // Assign initial subjects if provided
   if (Array.isArray(subjects) && subjects.length > 0) {
     await db.insert(teacherSubjectsTable).values(
       subjects.map((s: string) => ({ teacherId: id, subjectName: s }))
     );
   }
 
+  if (Array.isArray(grades) && grades.length > 0) {
+    await db.insert(teacherGradesTable).values(
+      grades.map((g: string) => ({ teacherId: id, grade: g }))
+    );
+  }
+
   await db.insert(activityLogsTable).values({
     userId: admin.id, userRole: "admin", userName: admin.fullName,
     action: "approve_teacher",
-    details: `Approved teacher ${teacher.fullName} (${teacher.email})`,
+    details: `Approved teacher ${teacher.fullName} (${teacher.email})${grades?.length ? ` — Grades: ${grades.join(", ")}` : ""}`,
   });
 
   res.json({ message: "Teacher approved", teacherName: teacher.fullName });
@@ -247,15 +251,19 @@ router.get("/admin/teachers", requireAdmin, async (req: Request, res: Response):
     .where(eq(teachersTable.accountStatus, "approved"))
     .orderBy(desc(teachersTable.createdAt));
 
-  // Fetch subjects for each teacher
   const teacherIds = teachers.map((t) => t.id);
-  const allSubjects = teacherIds.length > 0
-    ? await db.select().from(teacherSubjectsTable).where(inArray(teacherSubjectsTable.teacherId, teacherIds))
-    : [];
+
+  const [allSubjects, allGrades] = teacherIds.length > 0
+    ? await Promise.all([
+        db.select().from(teacherSubjectsTable).where(inArray(teacherSubjectsTable.teacherId, teacherIds)),
+        db.select().from(teacherGradesTable).where(inArray(teacherGradesTable.teacherId, teacherIds)),
+      ])
+    : [[], []];
 
   const result = teachers.map((t) => ({
     ...t,
     subjects: allSubjects.filter((s) => s.teacherId === t.id).map((s) => s.subjectName),
+    grades: allGrades.filter((g) => g.teacherId === t.id).map((g) => g.grade),
   }));
 
   res.json(result);
@@ -290,7 +298,6 @@ router.put("/admin/teachers/:id/subjects", requireAdmin, async (req: Request, re
   const [teacher] = await db.select().from(teachersTable).where(eq(teachersTable.id, id)).limit(1);
   if (!teacher) { res.status(404).json({ error: "Teacher not found" }); return; }
 
-  // Replace all subjects
   await db.delete(teacherSubjectsTable).where(eq(teacherSubjectsTable.teacherId, id));
   if (subjects.length > 0) {
     await db.insert(teacherSubjectsTable).values(subjects.map((s: string) => ({ teacherId: id, subjectName: s })));
@@ -305,6 +312,30 @@ router.put("/admin/teachers/:id/subjects", requireAdmin, async (req: Request, re
   res.json({ message: "Subjects updated", subjects });
 });
 
+router.put("/admin/teachers/:id/grades", requireAdmin, async (req: Request, res: Response): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  const admin = getAdmin(req);
+  const { grades } = req.body;
+
+  if (!Array.isArray(grades)) { res.status(400).json({ error: "grades must be an array" }); return; }
+
+  const [teacher] = await db.select().from(teachersTable).where(eq(teachersTable.id, id)).limit(1);
+  if (!teacher) { res.status(404).json({ error: "Teacher not found" }); return; }
+
+  await db.delete(teacherGradesTable).where(eq(teacherGradesTable.teacherId, id));
+  if (grades.length > 0) {
+    await db.insert(teacherGradesTable).values(grades.map((g: string) => ({ teacherId: id, grade: g })));
+  }
+
+  await db.insert(activityLogsTable).values({
+    userId: admin.id, userRole: "admin", userName: admin.fullName,
+    action: "update_grades",
+    details: `Updated grades for ${teacher.fullName}: [${grades.join(", ")}]`,
+  });
+
+  res.json({ message: "Grades updated", grades });
+});
+
 router.delete("/admin/teachers/:id", requireAdmin, async (req: Request, res: Response): Promise<void> => {
   const id = parseInt(req.params.id, 10);
   const admin = getAdmin(req);
@@ -313,6 +344,7 @@ router.delete("/admin/teachers/:id", requireAdmin, async (req: Request, res: Res
   if (!teacher) { res.status(404).json({ error: "Teacher not found" }); return; }
 
   await db.delete(teacherSubjectsTable).where(eq(teacherSubjectsTable.teacherId, id));
+  await db.delete(teacherGradesTable).where(eq(teacherGradesTable.teacherId, id));
   await db.delete(teachersTable).where(eq(teachersTable.id, id));
 
   await db.insert(activityLogsTable).values({
