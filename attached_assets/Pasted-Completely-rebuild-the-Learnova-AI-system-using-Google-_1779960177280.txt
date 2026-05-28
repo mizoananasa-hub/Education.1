@@ -1,0 +1,184 @@
+Completely rebuild the Learnova AI system using Google Gemini 1.5 Flash and make ALL AI features work reliably.
+
+SYSTEM SETUP:
+
+Use this exact Gemini initialization:
+
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const genAI = new GoogleGenerativeAI(
+process.env.GEMINI_API_KEY!
+);
+
+const model = genAI.getGenerativeModel({
+model: "gemini-1.5-flash",
+systemInstruction: `
+You are Learnova AI, an educational assistant inside an LMS app.
+
+RULES:
+
+* Always return valid output
+* Never return empty responses
+* Never say "I can't"
+* Use simple student-friendly language
+* Keep explanations concise but educational
+* Always follow the requested format exactly
+* Never include markdown code blocks unless explicitly requested
+* If output requires JSON, return ONLY valid JSON
+* Never add extra commentary outside the requested structure
+  `
+  });
+
+========================================
+UPLOAD / CONTENT EXTRACTION PROMPT
+==================================
+
+When students upload notes, PDFs, pasted text, or lesson content:
+
+* Extract the educational meaning clearly
+* Ignore random formatting issues
+* Focus on educational concepts
+* Preserve important facts, formulas, dates, and vocabulary
+* Detect the subject automatically if possible
+* Handle short and long notes gracefully
+
+If uploaded content is too short:
+
+* still generate useful educational output
+* never return blank results
+
+========================================
+FLASHCARDS PROMPT
+=================
+
+When generating flashcards:
+
+Use this exact prompt structure:
+
+Generate educational flashcards from the following lesson.
+
+RULES:
+
+* Return ONLY valid JSON array
+* No markdown
+* No explanations outside JSON
+* Questions should test understanding, not memorization only
+* Answers should be concise and clear
+* Generate:
+
+  * 10 cards for short notes
+  * 15 cards for medium notes
+  * up to 20 cards for large lessons
+
+Required JSON format:
+[
+{
+"question": "string",
+"answer": "string"
+}
+]
+
+LESSON:
+${content}
+
+Before parsing:
+
+* clean response
+* remove ```json
+* remove ```
+* trim whitespace
+
+Wrap JSON.parse() in try/catch.
+
+If parsing fails:
+
+* return fallback sample flashcards
+* never crash the app
+
+========================================
+SUMMARY PROMPT
+==============
+
+When generating summaries:
+
+Use this exact prompt:
+
+Create a student-friendly educational summary from the lesson below.
+
+FORMAT:
+
+TITLE:
+short descriptive lesson title
+
+SUMMARY:
+
+* 4 to 6 bullet points
+* simple explanations
+* concise wording
+
+KEY POINTS:
+
+* 5 to 10 critical facts students must remember
+
+IMPORTANT TERMS:
+
+* term — short meaning
+
+RULES:
+
+* No markdown code blocks
+* Never return empty output
+* Keep language simple
+* Be educational and structured
+
+LESSON:
+${content}
+
+========================================
+BACKEND REQUIREMENTS
+====================
+
+1. Add detailed logging:
+
+* Gemini raw response
+* parsed response
+* API errors
+* frontend fetch errors
+
+2. Ensure:
+   const text = result.response.text();
+
+always contains content before parsing.
+
+3. Add try/catch everywhere.
+
+4. Never silently fail.
+
+5. Always return fallback content if Gemini fails.
+
+6. API routes must always:
+   return res.json(...)
+
+7. Ensure frontend correctly awaits:
+   const data = await response.json();
+
+8. Add loading states and visible error messages.
+
+9. Remove ALL old Anthropic logic completely.
+
+10. Rebuild and fully test:
+
+* flashcards
+* summaries
+* uploads
+* parsing
+* frontend rendering
+
+FINAL RESULT:
+Learnova AI must reliably generate:
+
+* summaries
+* flashcards
+* educational responses
+
+without blank screens, crashes, or parsing failures.
