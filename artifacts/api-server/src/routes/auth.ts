@@ -12,10 +12,30 @@ const router = Router();
 
 router.post("/auth/admin/signin", async (req: Request, res: Response): Promise<void> => {
   const { username, password } = req.body;
-  if (!username || !password) { res.status(400).json({ error: "Username and password are required" }); return; }
 
-  const [admin] = await db.select().from(adminsTable).where(eq(adminsTable.username, username)).limit(1);
-  if (!admin || !(await bcrypt.compare(password, admin.passwordHash))) {
+  console.log(`[AUTH] Admin login attempt — username: "${username}"`);
+
+  if (!username || !password) {
+    console.log("[AUTH] Missing username or password");
+    res.status(400).json({ error: "Username and password are required" });
+    return;
+  }
+
+  const admins = await db.select().from(adminsTable).where(eq(adminsTable.username, username)).limit(1);
+  console.log(`[AUTH] Admin lookup result: ${admins.length} row(s) found`);
+
+  const admin = admins[0];
+  if (!admin) {
+    console.log(`[AUTH] No admin found with username: "${username}"`);
+    res.status(401).json({ error: "Invalid username or password" });
+    return;
+  }
+
+  const passwordMatch = await bcrypt.compare(password, admin.passwordHash);
+  console.log(`[AUTH] Password comparison result: ${passwordMatch}`);
+
+  if (!passwordMatch) {
+    console.log("[AUTH] Password mismatch");
     res.status(401).json({ error: "Invalid username or password" });
     return;
   }
@@ -26,6 +46,7 @@ router.post("/auth/admin/signin", async (req: Request, res: Response): Promise<v
   });
 
   const token = signToken({ role: "admin", id: admin.id, fullName: admin.username, username: admin.username });
+  console.log(`[AUTH] Admin login successful — id: ${admin.id}`);
   res.json({ token, user: { id: admin.id, fullName: admin.username, studentCode: null, grade: null, religion: null, subject: null, role: "admin" } });
 });
 
@@ -57,7 +78,6 @@ router.post("/auth/student/signup", async (req: Request, res: Response): Promise
     return;
   }
 
-  // Check for duplicate email
   if (email) {
     const existing = await db.select().from(studentsTable).where(eq(studentsTable.email, email)).limit(1);
     if (existing.length > 0) {
@@ -67,8 +87,6 @@ router.post("/auth/student/signup", async (req: Request, res: Response): Promise
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
-
-  // Auto-generate a temp student code (will be proper after approval)
   const tempCode = `PENDING-${Date.now()}`;
 
   await db.insert(studentsTable).values({
@@ -92,18 +110,20 @@ router.post("/auth/student/signup", async (req: Request, res: Response): Promise
 router.post("/auth/student/signin", async (req: Request, res: Response): Promise<void> => {
   const { identifier, password } = req.body;
 
+  console.log(`[AUTH] Student login attempt — identifier: "${identifier}"`);
+
   if (!identifier || !password) {
     res.status(400).json({ error: "Student code or email, and password are required" });
     return;
   }
 
-  // Try student code first, then email
   const results = await db.select().from(studentsTable).where(
     or(eq(studentsTable.studentCode, identifier), eq(studentsTable.email, identifier))
   ).limit(1);
 
   const student = results[0];
   if (!student) {
+    console.log(`[AUTH] No student found with identifier: "${identifier}"`);
     res.status(401).json({ error: "Invalid credentials" });
     return;
   }
@@ -123,6 +143,7 @@ router.post("/auth/student/signin", async (req: Request, res: Response): Promise
 
   const valid = await bcrypt.compare(password, student.passwordHash);
   if (!valid) {
+    console.log(`[AUTH] Student password mismatch for: "${identifier}"`);
     res.status(401).json({ error: "Invalid credentials" });
     return;
   }
@@ -137,6 +158,7 @@ router.post("/auth/student/signin", async (req: Request, res: Response): Promise
     studentCode: student.studentCode, grade: student.grade, religion: student.religion,
   });
 
+  console.log(`[AUTH] Student login successful — id: ${student.id}`);
   res.json({
     token,
     user: { id: student.id, fullName: student.fullName, studentCode: student.studentCode, grade: student.grade, religion: student.religion, subject: null, role: "student" },
@@ -185,6 +207,8 @@ router.post("/auth/teacher/signup", async (req: Request, res: Response): Promise
 router.post("/auth/teacher/signin", async (req: Request, res: Response): Promise<void> => {
   const { identifier, password } = req.body;
 
+  console.log(`[AUTH] Teacher login attempt — identifier: "${identifier}"`);
+
   if (!identifier || !password) {
     res.status(400).json({ error: "Email and password are required" });
     return;
@@ -196,6 +220,7 @@ router.post("/auth/teacher/signin", async (req: Request, res: Response): Promise
 
   const teacher = results[0];
   if (!teacher) {
+    console.log(`[AUTH] No teacher found with identifier: "${identifier}"`);
     res.status(401).json({ error: "Invalid credentials" });
     return;
   }
@@ -215,11 +240,11 @@ router.post("/auth/teacher/signin", async (req: Request, res: Response): Promise
 
   const valid = await bcrypt.compare(password, teacher.passwordHash);
   if (!valid) {
+    console.log(`[AUTH] Teacher password mismatch for: "${identifier}"`);
     res.status(401).json({ error: "Invalid credentials" });
     return;
   }
 
-  // Get assigned subjects and grades
   const [subjects, teacherGrades] = await Promise.all([
     db.select().from(teacherSubjectsTable).where(eq(teacherSubjectsTable.teacherId, teacher.id)),
     db.select().from(teacherGradesTable).where(eq(teacherGradesTable.teacherId, teacher.id)),
@@ -237,6 +262,7 @@ router.post("/auth/teacher/signin", async (req: Request, res: Response): Promise
     subject: subjectList[0] ?? "Unassigned",
   });
 
+  console.log(`[AUTH] Teacher login successful — id: ${teacher.id}`);
   res.json({
     token,
     user: {

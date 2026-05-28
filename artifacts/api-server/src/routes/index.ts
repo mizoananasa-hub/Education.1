@@ -11,6 +11,7 @@ import aiRouter from "./ai";
 import homeworkRouter from "./homework";
 import notificationsRouter from "./notifications";
 import adminRouter from "./admin";
+import debugRouter from "./debug";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(aiRouter);
 router.use(homeworkRouter);
 router.use(notificationsRouter);
 router.use(adminRouter);
+router.use(debugRouter);
 
 export default router;
