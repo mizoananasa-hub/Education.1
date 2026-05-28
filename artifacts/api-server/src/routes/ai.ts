@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db, filesTable, notesTable, noteFilesTable, notebooksTable } from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
 import { requireStudent } from "../middlewares/auth.js";
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { Request, Response } from "express";
 import type { JwtPayload } from "../middlewares/auth.js";
 import fs from "fs";
@@ -11,16 +11,30 @@ import path from "path";
 const router = Router();
 type AuthReq = Request & { user: JwtPayload };
 
-const anthropic = new Anthropic({
-  baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
-  apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY ?? "placeholder",
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+
+const model = genAI.getGenerativeModel({
+  model: "gemini-1.5-flash",
+  systemInstruction: `
+You are Learnova AI, an educational assistant inside an LMS app.
+
+RULES:
+* Always return valid output
+* Never return empty responses
+* Never say "I can't"
+* Use simple student-friendly language
+* Keep explanations concise but educational
+* Always follow the requested format exactly
+* Never include markdown code blocks unless explicitly requested
+* If output requires JSON, return ONLY valid JSON
+* Never add extra commentary outside the requested structure
+  `,
 });
 
 async function extractTextFromFile(filepath: string, filename: string): Promise<string> {
   const UPLOAD_DIR = process.env.UPLOAD_DIR ?? "./uploads";
   const fileHash = filepath.split("/").pop()!;
 
-  // Try teacher-files first, then note-files
   let physicalPath = path.join(UPLOAD_DIR, "teacher-files", fileHash);
   if (!fs.existsSync(physicalPath)) {
     physicalPath = path.join(UPLOAD_DIR, "note-files", fileHash);
@@ -65,52 +79,106 @@ router.post("/ai/summarize", requireStudent, async (req: Request, res: Response)
     return;
   }
 
-  let text: string;
+  let content: string;
   try {
-    text = await extractTextFromFile(file.filepath, file.filename);
+    content = await extractTextFromFile(file.filepath, file.filename);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Could not read file";
     res.status(400).json({ error: msg });
     return;
   }
 
-  if (!text || text.trim().length < 10) {
+  if (!content || content.trim().length < 5) {
     res.status(400).json({ error: "File has no readable text content" });
     return;
   }
 
-  const message = await anthropic.messages.create({
-    model: "claude-opus-4-5",
-    max_tokens: 1024,
-    messages: [
-      {
-        role: "user",
-        content: `Analyze the following educational content and provide a structured summary. Return ONLY valid JSON with this exact structure:
-{
-  "mainTopic": "string - the main subject/topic in 1-2 sentences",
-  "keyPoints": ["array of 5-7 key points as strings"],
-  "importantNotes": ["array of 3-5 important notes or tips as strings"]
-}
+  const prompt = `Create a student-friendly educational summary from the lesson below.
 
-Content to analyze:
-${text.slice(0, 6000)}`,
-      },
-    ],
-  });
+FORMAT:
 
-  const raw = message.content[0].type === "text" ? message.content[0].text : "";
+TITLE:
+short descriptive lesson title
+
+SUMMARY:
+- 4 to 6 bullet points
+- simple explanations
+- concise wording
+
+KEY POINTS:
+- 5 to 10 critical facts students must remember
+
+IMPORTANT TERMS:
+- term — short meaning
+
+RULES:
+- No markdown code blocks
+- Never return empty output
+- Keep language simple
+- Be educational and structured
+
+LESSON:
+${content.slice(0, 8000)}`;
 
   try {
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("No JSON found");
-    const parsed = JSON.parse(jsonMatch[0]);
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+
+    console.log("[AI/summarize] Gemini raw response length:", text.length);
+
+    if (!text || text.trim().length === 0) {
+      throw new Error("Empty response from Gemini");
+    }
+
+    const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+
+    let mainTopic = file.filename;
+    let keyPoints: string[] = [];
+    let importantNotes: string[] = [];
+
+    let currentSection = "";
+    for (const line of lines) {
+      const upper = line.toUpperCase();
+      if (upper.startsWith("TITLE:") || upper === "TITLE") {
+        currentSection = "title";
+        const inline = line.replace(/^title:?/i, "").trim();
+        if (inline) mainTopic = inline;
+      } else if (upper.startsWith("SUMMARY:") || upper === "SUMMARY") {
+        currentSection = "summary";
+      } else if (upper.startsWith("KEY POINTS:") || upper === "KEY POINTS") {
+        currentSection = "keypoints";
+      } else if (upper.startsWith("IMPORTANT TERMS:") || upper === "IMPORTANT TERMS") {
+        currentSection = "terms";
+      } else if (currentSection === "title" && !mainTopic.includes(" ")) {
+        mainTopic = line;
+        currentSection = "";
+      } else if (currentSection === "summary" || currentSection === "keypoints") {
+        const cleaned = line.replace(/^[-*•]\s*/, "").trim();
+        if (cleaned) keyPoints.push(cleaned);
+      } else if (currentSection === "terms") {
+        const cleaned = line.replace(/^[-*•]\s*/, "").trim();
+        if (cleaned) importantNotes.push(cleaned);
+      }
+    }
+
+    if (keyPoints.length === 0) {
+      keyPoints = lines.filter(l => l.startsWith("-") || l.startsWith("•") || l.startsWith("*")).map(l => l.replace(/^[-*•]\s*/, "").trim()).slice(0, 8);
+    }
+    if (keyPoints.length === 0) keyPoints = [text.slice(0, 300)];
+    if (importantNotes.length === 0) importantNotes = keyPoints.slice(0, 3);
+
     res.json({
-      mainTopic: parsed.mainTopic ?? "Unknown topic",
-      keyPoints: Array.isArray(parsed.keyPoints) ? parsed.keyPoints : [],
-      importantNotes: Array.isArray(parsed.importantNotes) ? parsed.importantNotes : [],
+      mainTopic,
+      keyPoints: keyPoints.slice(0, 10),
+      importantNotes: importantNotes.slice(0, 5),
     });
-  } catch {
-    res.status(500).json({ error: "Failed to parse AI response" });
+  } catch (err: unknown) {
+    console.error("[AI/summarize] Error:", err);
+    res.json({
+      mainTopic: file.filename,
+      keyPoints: ["Could not generate summary. Please try again."],
+      importantNotes: ["AI summary temporarily unavailable."],
+    });
   }
 });
 
@@ -123,7 +191,6 @@ router.post("/ai/flashcards", requireStudent, async (req: Request, res: Response
     return;
   }
 
-  // Verify student owns all requested notebooks
   const ids = notebookIds.map((id: unknown) => parseInt(String(id), 10));
   const ownedNotebooks = await db.select().from(notebooksTable).where(
     and(
@@ -137,11 +204,9 @@ router.post("/ai/flashcards", requireStudent, async (req: Request, res: Response
     return;
   }
 
-  // Collect all written notes
   const notes = await db.select().from(notesTable).where(inArray(notesTable.notebookId, ids));
   const writtenContent = notes.map(n => n.content).filter(Boolean).join("\n\n");
 
-  // Collect all uploaded note files text
   const noteFiles = await db.select().from(noteFilesTable).where(inArray(noteFilesTable.notebookId, ids));
   let fileContent = "";
   for (const nf of noteFiles) {
@@ -155,41 +220,64 @@ router.post("/ai/flashcards", requireStudent, async (req: Request, res: Response
 
   const combinedContent = (writtenContent + fileContent).trim();
 
-  if (!combinedContent || combinedContent.length < 10) {
+  if (!combinedContent || combinedContent.length < 5) {
     res.status(400).json({ error: "Selected notebooks have no notes. Please add notes before generating flashcards." });
     return;
   }
 
-  const message = await anthropic.messages.create({
-    model: "claude-opus-4-5",
-    max_tokens: 2048,
-    messages: [
-      {
-        role: "user",
-        content: `Generate exactly 10 educational flashcards from the following study notes. Return ONLY valid JSON with this exact structure:
-{
-  "flashcards": [
-    {"question": "string", "answer": "string"},
-    ...
-  ]
-}
+  const cardCount = combinedContent.length < 500 ? 10 : combinedContent.length < 2000 ? 15 : 20;
 
-Study notes:
-${combinedContent.slice(0, 6000)}`,
-      },
-    ],
-  });
+  const prompt = `Generate educational flashcards from the following lesson.
 
-  const raw = message.content[0].type === "text" ? message.content[0].text : "";
+RULES:
+- Return ONLY valid JSON array
+- No markdown
+- No explanations outside JSON
+- Questions should test understanding, not memorization only
+- Answers should be concise and clear
+- Generate exactly ${cardCount} flashcards
+
+Required JSON format:
+[
+  {
+    "question": "string",
+    "answer": "string"
+  }
+]
+
+LESSON:
+${combinedContent.slice(0, 8000)}`;
 
   try {
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("No JSON found");
+    const result = await model.generateContent(prompt);
+    const raw = result.response.text();
+
+    console.log("[AI/flashcards] Gemini raw response length:", raw.length);
+
+    if (!raw || raw.trim().length === 0) {
+      throw new Error("Empty response from Gemini");
+    }
+
+    let cleaned = raw.trim();
+    cleaned = cleaned.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/i, "").trim();
+
+    const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) throw new Error("No JSON array found in response");
+
     const parsed = JSON.parse(jsonMatch[0]);
-    if (!Array.isArray(parsed.flashcards)) throw new Error("Invalid flashcards array");
-    res.json({ flashcards: parsed.flashcards.slice(0, 10) });
-  } catch {
-    res.status(500).json({ error: "Failed to parse AI response" });
+    if (!Array.isArray(parsed) || parsed.length === 0) throw new Error("Invalid flashcards array");
+
+    console.log("[AI/flashcards] Parsed flashcards count:", parsed.length);
+    res.json({ flashcards: parsed.slice(0, 20) });
+  } catch (err: unknown) {
+    console.error("[AI/flashcards] Error:", err);
+    res.json({
+      flashcards: [
+        { question: "What is the main topic of your notes?", answer: "Review your notes to identify the core subject." },
+        { question: "What are the key concepts you need to remember?", answer: "Re-read your notes and highlight the most important ideas." },
+        { question: "How can you apply what you have learned?", answer: "Think of a real-world example that connects to your lesson." },
+      ],
+    });
   }
 });
 
