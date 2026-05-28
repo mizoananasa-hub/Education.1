@@ -1,0 +1,141 @@
+Upgrade the Learnova notes, flashcards, and file viewing systems with the following requirements.
+
+========================================
+NOTES SYSTEM
+============
+
+Implement automatic saving for notes using the best modern mechanism.
+
+Requirements:
+
+1. Notes auto-save automatically while typing.
+2. Use debounced saving:
+
+* save 1–2 seconds after user stops typing
+* prevent excessive API calls
+
+3. Add visible save states:
+
+* Saving...
+* Saved
+* Failed to save
+
+4. Add a manual "Save Notes" button as backup.
+5. Prevent data loss on refresh/navigation.
+6. Restore unsaved draft if save failed.
+7. Ensure notes persist correctly in database.
+8. Do not reload the page during saves.
+9. Keep UX smooth and instant.
+
+Preferred implementation:
+
+* React debounce
+* optimistic UI updates
+* async background saves
+
+========================================
+FLASHCARDS SYSTEM
+=================
+
+Current flashcards are wrong.
+
+Fix the AI so flashcards are generated from the REAL EDUCATIONAL CONTENT of the notes, not generic memorization advice.
+
+BAD EXAMPLES:
+
+* "How can you memorize your notes?"
+* "Why is reviewing important?"
+
+GOOD EXAMPLES:
+If notes are about photosynthesis:
+
+* "What is chlorophyll?"
+* "What gas do plants absorb during photosynthesis?"
+
+Requirements:
+
+1. AI must deeply analyze the uploaded lesson content.
+2. Flashcards must test actual subject understanding.
+3. Questions should come directly from:
+
+* facts
+* concepts
+* formulas
+* dates
+* vocabulary
+* explanations inside the lesson
+
+4. Never generate study tips unless explicitly requested.
+5. Generate educational curriculum-based flashcards only.
+6. Keep answers concise and accurate.
+7. Return ONLY valid JSON format:
+   [
+   {
+   "question": "...",
+   "answer": "..."
+   }
+   ]
+
+Use this improved flashcard prompt:
+
+Generate educational flashcards STRICTLY based on the lesson content below.
+
+RULES:
+
+* Use ONLY information found in the lesson
+* Do NOT generate study advice
+* Do NOT generate memorization tips
+* Questions must test understanding of the actual topic
+* Include important facts, vocabulary, formulas, and concepts
+* Answers must be concise and educational
+* Return ONLY valid JSON array
+* No markdown
+* No extra commentary
+
+LESSON:
+${content}
+
+========================================
+FILE VIEWING SYSTEM
+===================
+
+Currently students must download teacher files to open them.
+
+Change the system so uploaded teacher files can be viewed directly inside the student dashboard without downloading.
+
+Requirements:
+
+1. Add inline file viewing.
+2. Students should preview files directly in browser.
+3. Support:
+
+* PDF preview
+* Images
+* Text files
+* PowerPoints if possible
+* Documents if possible
+
+4. Add a "View" button and separate "Download" button.
+5. Students should still be able to download files manually if they want.
+6. Use embedded viewers where possible.
+7. Make previews responsive for mobile and desktop.
+8. Do not force downloads automatically.
+9. Keep existing upload system intact.
+
+Preferred implementation:
+
+* iframe/object/embed for PDFs
+* image preview component
+* document viewer libraries if needed
+
+========================================
+GENERAL REQUIREMENTS
+====================
+
+1. Do not break existing Learnova functionality.
+2. Add proper loading and error states.
+3. Add console logging for debugging.
+4. Ensure database compatibility.
+5. Rebuild and fully test all features.
+6. Keep UI modern and smooth.
+7. Ensure all changes work on both desktop and mobile.

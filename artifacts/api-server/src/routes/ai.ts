@@ -14,7 +14,7 @@ type AuthReq = Request & { user: JwtPayload };
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 const model = genAI.getGenerativeModel({
-  model: "gemini-1.5-flash",
+  model: "gemini-2.0-flash",
   systemInstruction: `
 You are Learnova AI, an educational assistant inside an LMS app.
 
@@ -227,15 +227,19 @@ router.post("/ai/flashcards", requireStudent, async (req: Request, res: Response
 
   const cardCount = combinedContent.length < 500 ? 10 : combinedContent.length < 2000 ? 15 : 20;
 
-  const prompt = `Generate educational flashcards from the following lesson.
+  const prompt = `Generate educational flashcards STRICTLY based on the lesson content below.
 
 RULES:
-- Return ONLY valid JSON array
-- No markdown
-- No explanations outside JSON
-- Questions should test understanding, not memorization only
-- Answers should be concise and clear
+- Use ONLY information found in the lesson text
+- Do NOT generate study advice or memorization tips
+- Do NOT generate generic questions like "How can you memorize this?"
+- Questions MUST test understanding of the actual subject matter
+- Include important facts, vocabulary definitions, formulas, dates, names, and concepts from the lesson
+- Answers must be concise, accurate, and taken directly from the lesson
 - Generate exactly ${cardCount} flashcards
+- Return ONLY a valid JSON array
+- No markdown formatting
+- No extra commentary outside the JSON
 
 Required JSON format:
 [

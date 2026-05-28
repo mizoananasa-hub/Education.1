@@ -20,7 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Download, Plus, Book, Trash2, Save, FileBox, Sparkles, RefreshCcw, ChevronLeft, ChevronRight, Check } from "lucide-react";
+import { FileText, Download, Plus, Book, Trash2, Save, Sparkles, RefreshCcw, ChevronLeft, ChevronRight, Check, Eye, X, Image, FileCode } from "lucide-react";
 import { format } from "date-fns";
 
 function getLabelColor(label: string) {
@@ -107,40 +107,151 @@ export default function SubjectWorkspace() {
 
 // --- TABS COMPONENTS ---
 
+function getFileType(filename: string): "pdf" | "image" | "text" | "other" {
+  const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+  if (ext === "pdf") return "pdf";
+  if (["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"].includes(ext)) return "image";
+  if (["txt", "md", "csv", "json", "xml", "html", "css", "js", "ts"].includes(ext)) return "text";
+  return "other";
+}
+
+function FileIcon({ filename }: { filename: string }) {
+  const t = getFileType(filename);
+  if (t === "pdf") return <FileText className="w-5 h-5" />;
+  if (t === "image") return <Image className="w-5 h-5" />;
+  if (t === "text") return <FileCode className="w-5 h-5" />;
+  return <FileText className="w-5 h-5" />;
+}
+
+type FileItem = { id: number; filename: string; filepath: string; createdAt: string; uploadedBy: string };
+
+function FileViewerModal({ file, onClose }: { file: FileItem; onClose: () => void }) {
+  const type = getFileType(file.filename);
+  const [textContent, setTextContent] = useState<string | null>(null);
+  const [textError, setTextError] = useState(false);
+
+  useEffect(() => {
+    if (type === "text") {
+      fetch(file.filepath)
+        .then(r => r.text())
+        .then(setTextContent)
+        .catch(() => setTextError(true));
+    }
+  }, [file.filepath, type]);
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl w-full h-[85vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-6 py-4 border-b flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <DialogTitle className="truncate pr-8">{file.filename}</DialogTitle>
+          </div>
+          <p className="text-xs text-muted-foreground">{format(new Date(file.createdAt), "MMM d, yyyy")} • Uploaded by {file.uploadedBy}</p>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-hidden bg-muted/30">
+          {type === "pdf" && (
+            <iframe
+              src={`${file.filepath}#toolbar=1&view=FitH`}
+              className="w-full h-full border-0"
+              title={file.filename}
+            />
+          )}
+          {type === "image" && (
+            <div className="w-full h-full flex items-center justify-center p-6 overflow-auto">
+              <img
+                src={file.filepath}
+                alt={file.filename}
+                className="max-w-full max-h-full object-contain rounded shadow-lg"
+              />
+            </div>
+          )}
+          {type === "text" && (
+            <div className="w-full h-full overflow-auto p-6">
+              {textError ? (
+                <p className="text-muted-foreground text-center py-12">Could not load file content.</p>
+              ) : textContent === null ? (
+                <p className="text-muted-foreground text-center py-12">Loading...</p>
+              ) : (
+                <pre className="text-sm font-mono whitespace-pre-wrap break-words leading-relaxed">{textContent}</pre>
+              )}
+            </div>
+          )}
+          {type === "other" && (
+            <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-muted-foreground">
+              <FileText className="w-16 h-16 opacity-30" />
+              <p className="text-lg font-medium">Preview not available</p>
+              <p className="text-sm">This file type cannot be previewed in the browser.</p>
+              <Button asChild>
+                <a href={file.filepath} download={file.filename}>
+                  <Download className="w-4 h-4 mr-2" /> Download to view
+                </a>
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <div className="px-6 py-4 border-t flex-shrink-0 flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose}>Close</Button>
+          <Button asChild>
+            <a href={file.filepath} download={file.filename}>
+              <Download className="w-4 h-4 mr-2" /> Download
+            </a>
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function FilesTab({ subject }: { subject: string }) {
   const { data: files, isLoading } = useGetFiles(
     { subject },
     { query: { enabled: !!subject, queryKey: getGetFilesQueryKey({ subject }) } }
   );
+  const [viewingFile, setViewingFile] = useState<FileItem | null>(null);
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) return <div className="py-12 text-center text-muted-foreground">Loading files...</div>;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {files?.map(file => (
-        <Card key={file.id} className="hover-elevate transition-all">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3 truncate">
-              <div className="p-2 rounded bg-primary/10 text-primary">
-                <FileText className="w-5 h-5" />
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {files?.map(file => (
+          <Card key={file.id} className="hover-elevate transition-all">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 rounded bg-primary/10 text-primary shrink-0">
+                  <FileIcon filename={file.filename} />
+                </div>
+                <div className="truncate">
+                  <p className="font-medium truncate" title={file.filename}>{file.filename}</p>
+                  <p className="text-xs text-muted-foreground">{format(new Date(file.createdAt), "MMM d, yyyy")} • By {file.uploadedBy}</p>
+                </div>
               </div>
-              <div className="truncate">
-                <p className="font-medium truncate" title={file.filename}>{file.filename}</p>
-                <p className="text-xs text-muted-foreground">{format(new Date(file.createdAt), "MMM d, yyyy")} • By {file.uploadedBy}</p>
+              <div className="flex gap-2 mt-2">
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => setViewingFile(file as FileItem)}
+                >
+                  <Eye className="w-4 h-4 mr-1.5" /> View
+                </Button>
+                <Button variant="outline" size="sm" asChild>
+                  <a href={file.filepath} download={file.filename}>
+                    <Download className="w-4 h-4" />
+                  </a>
+                </Button>
               </div>
-            </div>
-            <Button variant="ghost" size="icon" asChild>
-              <a href={file.filepath} target="_blank" rel="noopener noreferrer">
-                <Download className="w-4 h-4" />
-              </a>
-            </Button>
-          </CardContent>
-        </Card>
-      ))}
-      {files?.length === 0 && (
-        <div className="col-span-full py-12 text-center text-muted-foreground">No files uploaded by the teacher yet.</div>
-      )}
-    </div>
+            </CardContent>
+          </Card>
+        ))}
+        {files?.length === 0 && (
+          <div className="col-span-full py-12 text-center text-muted-foreground">No files uploaded by the teacher yet.</div>
+        )}
+      </div>
+      {viewingFile && <FileViewerModal file={viewingFile} onClose={() => setViewingFile(null)} />}
+    </>
   );
 }
 
@@ -228,6 +339,10 @@ function NotesTab({ subject }: { subject: string }) {
   );
 }
 
+type SaveState = "idle" | "saving" | "saved" | "failed";
+
+const DRAFT_KEY = (id: number) => `learnova_note_draft_${id}`;
+
 function NoteEditor({ notebookId, onBack }: { notebookId: number, onBack: () => void }) {
   const { data: notes } = useGetNotes({ notebookId }, { query: { queryKey: getGetNotesQueryKey({ notebookId }) } });
   const { data: noteFiles } = useGetNoteFiles({ notebookId }, { query: { queryKey: getGetNoteFilesQueryKey({ notebookId }) } });
@@ -238,6 +353,13 @@ function NoteEditor({ notebookId, onBack }: { notebookId: number, onBack: () => 
   const updateNote = useUpdateNote();
   const deleteNoteFile = useDeleteNoteFile();
 
+  const activeNote = notes?.[0];
+  const [content, setContent] = useState("");
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const initialized = useRef(false);
+  const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Create empty note if none exists
   useEffect(() => {
     if (notes && notes.length === 0 && !createNote.isPending) {
@@ -247,27 +369,52 @@ function NoteEditor({ notebookId, onBack }: { notebookId: number, onBack: () => 
     }
   }, [notes, notebookId]);
 
-  const activeNote = notes?.[0];
-  const [content, setContent] = useState("");
-  const initialized = useRef(false);
-  const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-
+  // Initialize content — prefer any saved draft over DB value
   useEffect(() => {
     if (activeNote && !initialized.current) {
-      setContent(activeNote.content);
+      const draft = localStorage.getItem(DRAFT_KEY(activeNote.id));
+      setContent(draft ?? activeNote.content);
+      if (draft) {
+        console.log("[NoteEditor] Restored unsaved draft for note", activeNote.id);
+      }
       initialized.current = true;
     }
   }, [activeNote]);
 
+  const doSave = (val: string, noteId: number) => {
+    setSaveState("saving");
+    console.log("[NoteEditor] Auto-saving note", noteId);
+    updateNote.mutate({ id: noteId, data: { content: val } }, {
+      onSuccess: () => {
+        setSaveState("saved");
+        localStorage.removeItem(DRAFT_KEY(noteId));
+        console.log("[NoteEditor] Note saved successfully");
+        if (savedTimer.current) clearTimeout(savedTimer.current);
+        savedTimer.current = setTimeout(() => setSaveState("idle"), 2500);
+      },
+      onError: (err) => {
+        setSaveState("failed");
+        localStorage.setItem(DRAFT_KEY(noteId), val);
+        console.error("[NoteEditor] Save failed, draft stored locally", err);
+      },
+    });
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
     setContent(val);
+    setSaveState("idle");
     if (saveTimeout.current) clearTimeout(saveTimeout.current);
-    saveTimeout.current = setTimeout(() => {
-      if (activeNote) {
-        updateNote.mutate({ id: activeNote.id, data: { content: val } });
-      }
-    }, 1000);
+    if (activeNote) {
+      saveTimeout.current = setTimeout(() => doSave(val, activeNote.id), 1500);
+    }
+  };
+
+  const handleManualSave = () => {
+    if (activeNote) {
+      if (saveTimeout.current) clearTimeout(saveTimeout.current);
+      doSave(content, activeNote.id);
+    }
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -290,11 +437,36 @@ function NoteEditor({ notebookId, onBack }: { notebookId: number, onBack: () => 
     <div className="flex flex-col h-[600px] border rounded-xl overflow-hidden bg-card">
       <div className="flex items-center justify-between p-4 border-b bg-muted/30">
         <Button variant="ghost" onClick={onBack} size="sm"><ChevronLeft className="w-4 h-4 mr-1" /> Back</Button>
-        <div className="flex items-center gap-2">
-          {updateNote.isPending && <span className="text-xs text-muted-foreground flex items-center"><Save className="w-3 h-3 mr-1" /> Saving...</span>}
+        <div className="flex items-center gap-3">
+          {/* Save state indicator */}
+          {saveState === "saving" && (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <RefreshCcw className="w-3 h-3 animate-spin" /> Saving...
+            </span>
+          )}
+          {saveState === "saved" && (
+            <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+              <Check className="w-3 h-3" /> Saved
+            </span>
+          )}
+          {saveState === "failed" && (
+            <span className="text-xs text-destructive flex items-center gap-1">
+              <X className="w-3 h-3" /> Failed to save
+            </span>
+          )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleManualSave}
+            disabled={saveState === "saving" || !activeNote}
+          >
+            <Save className="w-4 h-4 mr-1.5" /> Save Notes
+          </Button>
+
           <input type="file" ref={fileInputRef} onChange={handleUpload} className="hidden" />
           <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-            <Plus className="w-4 h-4 mr-2" /> Add File
+            <Plus className="w-4 h-4 mr-1.5" /> Add File
           </Button>
         </div>
       </div>
@@ -302,7 +474,7 @@ function NoteEditor({ notebookId, onBack }: { notebookId: number, onBack: () => 
       <div className="flex flex-1 overflow-hidden">
         <Textarea 
           className="flex-1 resize-none border-0 rounded-none focus-visible:ring-0 p-6 text-base bg-transparent"
-          placeholder="Start typing your notes here..."
+          placeholder="Start typing your notes here... Changes are saved automatically."
           value={content}
           onChange={handleChange}
         />
@@ -443,7 +615,17 @@ function FlashcardsTab({ subject }: { subject: string }) {
         <div className="w-full max-w-xl animate-in fade-in zoom-in-95 duration-500">
           <div className="mb-6 flex justify-between items-center text-sm font-medium text-muted-foreground">
             <span>Card {currentIndex + 1} of {cards.length}</span>
-            <Progress value={((currentIndex + 1) / cards.length) * 100} className="w-1/2 h-2" />
+            <div className="flex items-center gap-3">
+              <Progress value={((currentIndex + 1) / cards.length) * 100} className="w-32 h-2" />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { generate.reset(); setCurrentIndex(0); setIsFlipped(false); }}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                <RefreshCcw className="w-3 h-3 mr-1" /> New Set
+              </Button>
+            </div>
           </div>
 
           <div 
